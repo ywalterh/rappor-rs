@@ -9,3 +9,4 @@ Implement simple RAPPOR in both client and server side
 
 ## Comments
 (WH) don't think this is easy at all!!
+(DJW) easy stuff is boring Walter
