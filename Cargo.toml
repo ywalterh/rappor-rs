@@ -8,3 +8,4 @@ edition = "2018"
 
 [dependencies]
 bloom = { git = "https://github.com/ywalterh/bloom-rs" }
+rand = "0.7.3"

@@ -1,13 +1,18 @@
 use bloom::{ASMS,BloomFilter};
+use rand::Rng;
 
 // This contains the client implementation of RAPPOR
 pub struct Factory {
+    k: u32,
     rate: f32,
+    f: f32,
+    p: u8,
+    q: u8,
 }
 
 impl Factory {
     fn new(rate: f32) -> Self {
-        Factory { rate }
+        Factory { k: 32, rate: rate, f: 0.2 , p: 1, q: 0}
     }
 
     fn process(&self, value: String) -> String {
@@ -16,12 +21,37 @@ impl Factory {
         let mut bf = BloomFilter::with_rate(self.rate, 32);
         bf.insert(&value); 
         // this is the B[i] set
-        let bv = bf.bits;
-        for i in bv {
-            println!("{}", i);
+        let bi = bf.bits;
+        
+        // permanent randomized response with f, 1/2 f, 1/2f to 0, 1 - f with Bi
+        let mut rng = rand::thread_rng();
+        let m = 200;
+
+        let mut perm_randomized = Vec::<bool>::new();
+        let k =  (m as f32 * 0.5 * self.f) as u8;
+        let l =  (m as f32 * 1.0 * self.f) as u8;
+        for b in bi {
+            let random_number = rng.gen_range(0, m);
+            if random_number <= k{
+                perm_randomized.push(true);
+            } else if k < random_number  && random_number<= l {
+                perm_randomized.push(false);
+            } else {
+                perm_randomized.push(b);
+            }
         }
 
-        // permanent randomized response
+        // instant randomized response
+        let mut instant_randomized: Vec<u8> = Vec::<u8>::new();
+        for b in perm_randomized {
+            if b {
+                instant_randomized.push(self.p);
+            } else {
+                instant_randomized.push(self.q);
+            }
+        }
+
+        // report instant_randomized
         return "".into();
     }
 }
@@ -29,7 +59,6 @@ impl Factory {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::str::FromStr;
 
     #[test]
     fn it_works() {
