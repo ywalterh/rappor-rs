@@ -1,51 +1,70 @@
 extern crate bloom;
 // This contains the client implementation of RAPPOR
-use bloom::{ASMS, BloomFilter};
-
+use bloom::{BloomFilter, ASMS};
 
 pub struct Factory {
-    rate: f32 
+    rate: f32,
 }
 
+// 8 bit
+fn to_binary(set: &mut Vec<u8>, mut decimal: u8) {
+    let mut bits = Vec::<u8>::new();
+    if decimal == 0 {
+        bits.push(0);
+    } else {
+        while decimal > 0 {
+            if decimal % 2 == 0 {
+                bits.push(0);
+            } else {
+                bits.push(1);
+            }
+            decimal /= 2;
+        }
+    }
+    // add empty bit back
+    let k = 8 - bits.len();
+    for _ in  0..k {
+        bits.push(0);
+    }
+    
+    // reverse the bits
+    bits.reverse();
+    set.append(&mut bits);
+}
 
 // lack of good way of doing it for now, it would be better to use byte array directly
-pub fn string_to_binary(value: String) -> String { let bytes = value.as_bytes();
-    let mut result = String::new();
+pub fn string_to_binary(value: String) -> Vec<u8> {
+    let bytes = value.as_bytes();
+    let mut result = Vec::<u8>::new();
     for byte in bytes {
-        let byte_string =  format!("{:b}", byte);
-        let added_zero = 8 - byte_string.len();
-        for _ in 0..added_zero {
-            result.push('0');
-        }
-        result.push_str(byte_string.as_str());
+        to_binary(&mut result, byte.clone());
     }
-    return result; 
+    return result;
 }
 
 impl Factory {
     fn new(rate: f32) -> Self {
-        Factory{rate}
+        Factory { rate }
     }
 
-    fn process(&self, value: String) -> String{
+    fn process(&self, value: String) -> String {
         let bits = string_to_binary(value);
         let k = bits.len();
         // step1: hash client's value v onto Bloom filter B of size k using h hash function
         let mut filter = BloomFilter::with_rate(self.rate, k as u32);
-        for bit in bits.as_bytes() {
-            println!("Adding {}", bit);
-            filter.insert(bit);
+        for bit in bits {
+            filter.insert(&bit);
         }
 
-        return "".into()
-    }   
+        return "".into();
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use std::str::FromStr;
-   
+
     #[test]
     fn it_works() {
         let f = Factory::new(0.01);
@@ -55,6 +74,19 @@ mod tests {
 
     #[test]
     fn test_string_to_binary() {
-        assert_eq!(string_to_binary("test".into()), "01110100011001010111001101110100");
+        let mut assertion = Vec::<u8>::new();
+        for b in "01110100011001010111001101110100".as_bytes() {
+            if b.eq(&48) {
+                assertion.push(0);
+            } else {
+                assertion.push(1);
+
+            }
+        }
+
+        assert_eq!(
+            string_to_binary("test".into()),
+            assertion
+        );
     }
 }
