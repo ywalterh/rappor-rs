@@ -1,7 +1,6 @@
-extern crate bloom;
-// This contains the client implementation of RAPPOR
-use bloom::{BloomFilter, ASMS};
+use bloom::{ASMS,BloomFilter};
 
+// This contains the client implementation of RAPPOR
 pub struct Factory {
     rate: f32,
 }
@@ -49,13 +48,16 @@ impl Factory {
 
     fn process(&self, value: String) -> String {
         let bits = string_to_binary(value);
-        let k = bits.len();
         // step1: hash client's value v onto Bloom filter B of size k using h hash function
-        let mut filter = BloomFilter::with_rate(self.rate, k as u32);
+        let mut bf = BloomFilter::with_rate(self.rate, bits.len() as u32);
         for bit in bits {
-            filter.insert(&bit);
+            bf.insert(&bit);
         }
-
+        // this is the B[i] set
+        let bv = bf.bits;
+        for i in bv {
+            println!("{}", i);
+        }
         return "".into();
     }
 }
