@@ -7,6 +7,17 @@ Implement simple RAPPOR in both client and server side
 * A good high volume database to test the implementation
 * Parameter tuning
 
+## Build instruction
+
+Install and configure wasm-pack:
+
+`curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh`
+
+Update npm
+
+`npm install npm@latest -g`
+
+
 ## Comments
 (WH) don't think this is easy at all!!
 (DJW) easy stuff is boring Walter
