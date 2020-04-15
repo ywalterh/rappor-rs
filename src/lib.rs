@@ -14,11 +14,11 @@ extern {
 }
 
 #[wasm_bindgen]
-pub fn greet() {
+pub fn greet(input: &str) {
     init_panic_hook();
     // add more code here
     let f = client::Factory::new(0.01);
-    let result = f.process("test".into());
+    let result = f.process(input.into());
     alert(format!("Hello, test-wasm : {}!", result).as_str());
 }
 
