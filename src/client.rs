@@ -11,11 +11,11 @@ pub struct Factory {
 }
 
 impl Factory {
-    fn new(rate: f32) -> Self {
+    pub fn new(rate: f32) -> Self {
         Factory { k: 32, rate: rate, f: 0.2 , p: 1, q: 0}
     }
 
-    fn process(&self, value: String) -> String {
+    pub fn process(&self, value: String) -> String {
         // step1: hash client's value v onto Bloom filter B of size k using h hash function
         // let's say k is 32
         let mut bf = BloomFilter::with_rate(self.rate, 32);
@@ -52,7 +52,7 @@ impl Factory {
         }
 
         // report instant_randomized
-        return "".into();
+        return format!("{:?}", instant_randomized);
     }
 }
 
