@@ -17,6 +17,15 @@ Update npm
 
 `npm install npm@latest -g`
 
+Build the project and then run the dev server
+
+```
+wasm-pack build
+cd www
+npm install
+npm run start
+```
+
 
 ## Comments
 (WH) don't think this is easy at all!!
