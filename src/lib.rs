@@ -1,5 +1,4 @@
 mod client;
-mod utils;
 
 use wasm_bindgen::prelude::*;
 
@@ -16,8 +15,14 @@ extern {
 
 #[wasm_bindgen]
 pub fn greet() {
+    init_panic_hook();
     // add more code here
     let f = client::Factory::new(0.01);
     let result = f.process("test".into());
     alert(format!("Hello, test-wasm : {}!", result).as_str());
+}
+
+#[wasm_bindgen]
+pub fn init_panic_hook() {
+    console_error_panic_hook::set_once();
 }
