@@ -12,13 +12,13 @@ pub struct Factory {
 
 impl Factory {
     pub fn new(rate: f32) -> Self {
-        Factory { k: 32, rate: rate, f: 0.2 , p: 1, q: 0}
+        Factory { k: 32, rate, f: 0.2 , p: 1, q: 0}
     }
 
     pub fn process(&self, value: String) -> String {
         // step1: hash client's value v onto Bloom filter B of size k using h hash function
         // let's say k is 32
-        let mut bf = BloomFilter::with_rate(self.rate, 32);
+        let mut bf = BloomFilter::with_rate(self.rate, self.k);
         bf.insert(&value); 
         // this is the B[i] set
         let bi = bf.bits;
