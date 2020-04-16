@@ -12,3 +12,5 @@ Cargo.lock
 
 www/node_modules
 www/dist
+
+.vscode
