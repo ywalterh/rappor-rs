@@ -9,17 +9,27 @@ use wasm_bindgen::prelude::*;
 static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 
 #[wasm_bindgen]
-extern {
+extern "C" {
     fn alert(s: &str);
 }
 
 #[wasm_bindgen]
-pub fn greet(input: &str) {
+pub async fn greet(input: String)  -> Result<JsValue, JsValue> {
     init_panic_hook();
     // add more code here
     let f = client::Factory::new(0.01);
-    let result = f.process(input.into());
-    alert(format!("Hello, test-wasm : {}!", result).as_str());
+    let result = f.process(input);
+    // use rest API call to communicate with server
+    let res = reqwest::Client::new()
+        .post("http://localhost:8000/api/report")
+        .body(result)
+        .header("Access-Control-Allow-Origin", "*")
+        .send()
+        .await?;
+    
+    let text = res.text().await?;
+    alert(format!("Reported {}", text).as_str());
+    Ok(JsValue::from_str(&text))
 }
 
 #[wasm_bindgen]
