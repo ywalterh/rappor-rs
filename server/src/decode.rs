@@ -22,23 +22,30 @@ mod tests {
     fn test() -> Result<(), RegressionError> {
         let bv = BitVec::from_bytes(&[0b10100000, 0b00010010]);
         let k = bv.len(); // size of filter
-        let h = 1; // number of hash functions
+        let h = 1.; // number of hash functions
         let f = 0.5; // permanent response randomizer
         let p = 0.5; // temporary response randomizer
         let q = 0.5; // temporary response randomizer
-        let m = 1; // number of cohorts (groups of hash functions used by clients)
+        let m = 1.; // number of cohorts (groups of hash functions used by clients)
 
         let cohorts = vec![vec![bv]]; // for now, just one cohort of only one client
 
         let init = || Array1::<f32>::zeros(k);
-       
-        let true_counts_by_cohort = cohorts.iter().map(|cohort| {
+
+        let mut reported_counts_by_cohort = cohorts.iter().map(|cohort| {
             cohort.iter().fold(init(), |acc, curr_bv| {
                 acc + to_a1(curr_bv)
             })
-        });
+        }).collect::<Vec<Array1<f32>>>(); // TODO need to capture number of reports per cohort here too
+        let n = 1.; // cheating here hard coding to 1 report per cohort
 
+        let estimated_true_counts_by_cohort = reported_counts_by_cohort.iter().map(|counts| {
+            counts.map(|count| {
+                ( count - (p + 0.5 * f * q - 0.5 * f * p) * n ) / (( 1. - f ) * ( q - p ))
+            })
+        }).collect::<Vec<Array1<f32>>>();
 
+        
         // define some test data
         let data_y = array![0.3, 1.3, 0.7];
         let data_x = array![[0.1, 0.2], [-0.4, 0.1], [0.2, 0.4]];
