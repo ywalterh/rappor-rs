@@ -18,6 +18,10 @@ mod tests {
         )
     }
 
+    /*
+    We need to do regress(X, Y).L2_regularization(lambda)
+    Where X and Y are data, lambda is a hyperparameter (the default in Numpy/scikit is 1 so start with that maybe)
+    */
     #[test]
     fn test() -> Result<(), RegressionError> {
         let bv = BitVec::from_bytes(&[0b10100000, 0b00010010]);
@@ -28,6 +32,10 @@ mod tests {
         let q = 0.5; // temporary response randomizer
         let m = 1.; // number of cohorts (groups of hash functions used by clients)
 
+        // Cohorts implement different sets of h hash functions for their Bloom filters, thereby
+        // reducing the chance of accidental collisions of two strings
+        // across all of them.
+        // what's the hash function?
         let cohorts = vec![vec![bv]]; // for now, just one cohort of only one client
 
         let init = || Array1::<f32>::zeros(k);
@@ -61,4 +69,6 @@ mod tests {
         println!("Fit result: {}", fit.result);
         Ok(())
     }
+
+
 }

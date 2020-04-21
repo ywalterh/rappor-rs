@@ -26,7 +26,17 @@ npm install
 npm run start
 ```
 
+### Server
+
+`sudo apt update && sudo apt install gfortran libopenblas-dev`
+
+`yay -S gcc-fortran libopenblas`
+
 
 ## Comments
 (WH) don't think this is easy at all!!
 (DJW) easy stuff is boring Walter
+
+## References
+
+https://static.googleusercontent.com/media/research.google.com/en//pubs/archive/42852.pdf
