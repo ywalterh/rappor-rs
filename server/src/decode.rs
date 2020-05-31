@@ -6,6 +6,7 @@ use ndarray::ArrayBase;
 use ndarray::*;
 use ndarray_glm::error::RegressionError;
 use ndarray_glm::{linear::Linear, model::ModelBuilder, standardize::standardize};
+use ndarray_glm::{fit::Fit, linear::Linear, model::ModelBuilder, standardize::standardize};
 
 #[cfg(test)]
 mod tests {
@@ -20,8 +21,10 @@ mod tests {
 
     // take Y and X then produce a model that fit for step 3
     // take ndarray
+    // producce a fit result Y of X
     // TODO fix to use lasso here, or at least something similar
-    pub fn lasso_regression(x: Array2<f32>, y: Array1<f32>) -> Result<(), RegressionError> {
+    // select candidate strings corresponding to non-zero coefficients.
+    fn linear_regression(x: Array2<f32>, y: Array1<f32>) -> Result<Fit, RegressionError> {
         // The design matrix can optionally be standardized, where the mean of each independent
         // variable is subtracted and each is then divided by the standard deviation of that variable.
         let data_x = standardize(x);
@@ -33,11 +36,15 @@ mod tests {
             .l2_reg(1e-5)
             .build()?;
         let fit = model.fit()?;
-
         // Currently the result is a simple array of the MLE estimators, including the intercept term.
         println!("Fit result: {}", fit.result);
-        Ok(())
+        Ok(fit)
     }
+
+    // Fit a regular least-squares regression using the selected
+    // variables to estimate counts, their standard errors and
+    // p-values.
+    fn least_square_regression() {}
 
     /*
     We need to do regress(X, Y).L2_regularization(lambda)
@@ -88,6 +95,6 @@ mod tests {
         let data_y = array![0.3, 1.3, 0.7];
         let data_x = array![[0.1, 0.2], [-0.4, 0.1], [0.2, 0.4]];
 
-        lasso_regression(data_x, data_y)
+        linear_regression(data_x, data_y)
     }
 }
