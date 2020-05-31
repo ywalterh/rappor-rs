@@ -1,28 +1,42 @@
-use ndarray::array;
-use ndarray_glm::{linear::Linear, model::ModelBuilder, standardize::standardize};
-use ndarray_glm::error::RegressionError;
 use bit_vec::BitVec;
-use ndarray::ArrayBase;
-use ndarray::Array2;
+use ndarray::array;
 use ndarray::Array1;
+use ndarray::Array2;
+use ndarray::ArrayBase;
 use ndarray::*;
-
-
-// take Y and X then produce a model that fit for step 3
-// take ndarray
-pub fn regression() {
-
-}
+use ndarray_glm::error::RegressionError;
+use ndarray_glm::{linear::Linear, model::ModelBuilder, standardize::standardize};
 
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    fn to_a1(bv : &BitVec) -> Array1<f32> {
+    fn to_a1(bv: &BitVec) -> Array1<f32> {
         Array1::from(
             bv.iter()
-                .map(|bit| if bit { 1. } else { 0. }).collect::<Vec<f32>>()
+                .map(|bit| if bit { 1. } else { 0. })
+                .collect::<Vec<f32>>(),
         )
+    }
+
+    // take Y and X then produce a model that fit for step 3
+    // take ndarray
+    // TODO fix to use lasso here, or at least something similar
+    pub fn lasso_regression(x: Array2<f32>, y: Array1<f32>) -> Result<(), RegressionError> {
+        // The design matrix can optionally be standardized, where the mean of each independent
+        // variable is subtracted and each is then divided by the standard deviation of that variable.
+        let data_x = standardize(x);
+
+        // The model is generic over floating point type for the independent data variables.
+        // If the second argument is blank (`_`), it will be inferred if possible.
+        // L2 regularization can be applied with l2_reg().
+        let model = ModelBuilder::<Linear>::data(y.view(), data_x.view())
+            .l2_reg(1e-5)
+            .build()?;
+        let fit = model.fit()?;
+
+        // Currently the result is a simple array of the MLE estimators, including the intercept term.
+        println!("Fit result: {}", fit.result);
+        Ok(())
     }
 
     /*
@@ -47,39 +61,33 @@ mod tests {
 
         let init = || Array1::<f32>::zeros(k);
 
-        let mut reported_counts_by_cohort = cohorts.iter().map(|cohort| {
-            cohort.iter().fold(init(), |acc, curr_bv| {
-                acc + to_a1(curr_bv)
+        let mut reported_counts_by_cohort = cohorts
+            .iter()
+            .map(|cohort| {
+                cohort
+                    .iter()
+                    .fold(init(), |acc, curr_bv| acc + to_a1(curr_bv))
             })
-        }).collect::<Vec<Array1<f32>>>(); // TODO need to capture number of reports per cohort here too
+            .collect::<Vec<Array1<f32>>>(); // TODO need to capture number of reports per cohort here too
         let n = 1.; // cheating here hard coding to 1 report per cohort
 
-        let estimated_true_counts_by_cohort = reported_counts_by_cohort.iter().map(|counts| {
-            counts.map(|count| {
-                ( count - (p + 0.5 * f * q - 0.5 * f * p) * n ) / (( 1. - f ) * ( q - p ))
+        let estimated_true_counts_by_cohort = reported_counts_by_cohort
+            .iter()
+            .map(|counts| {
+                counts.map(|count| {
+                    (count - (p + 0.5 * f * q - 0.5 * f * p) * n) / ((1. - f) * (q - p))
+                })
             })
-        }).collect::<Vec<Array1<f32>>>();
+            .collect::<Vec<Array1<f32>>>();
+        Ok(())
     }
 
     #[test]
-    fn test_regression() -> Result<(), RegressionErorr> {
+    fn test_regression() -> Result<(), RegressionError> {
         // define some test data
         let data_y = array![0.3, 1.3, 0.7];
         let data_x = array![[0.1, 0.2], [-0.4, 0.1], [0.2, 0.4]];
-        // The design matrix can optionally be standardized, where the mean of each independent
-        // variable is subtracted and each is then divided by the standard deviation of that variable.
-        let data_x = standardize(data_x);
-        
-        // The model is generic over floating point type for the independent data variables.
-        // If the second argument is blank (`_`), it will be inferred if possible.
-        // L2 regularization can be applied with l2_reg().
-        let model = ModelBuilder::<Linear, f32>::new(&data_y, &data_x).l2_reg(1e-5).build()?;
-        let fit = model.fit()?;
 
-        // Currently the result is a simple array of the MLE estimators, including the intercept term.
-        println!("Fit result: {}", fit.result);
-        Ok(()) 
+        lasso_regression(data_x, data_y)
     }
-
-
 }
