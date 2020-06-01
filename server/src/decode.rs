@@ -6,7 +6,6 @@ use ndarray::ArrayBase;
 use ndarray::*;
 use ndarray_glm::error::RegressionError;
 use ndarray_glm::{linear::Linear, model::ModelBuilder, standardize::standardize};
-use ndarray_glm::{fit::Fit, linear::Linear, model::ModelBuilder, standardize::standardize};
 
 #[cfg(test)]
 mod tests {
@@ -24,7 +23,7 @@ mod tests {
     // producce a fit result Y of X
     // TODO fix to use lasso here, or at least something similar
     // select candidate strings corresponding to non-zero coefficients.
-    fn linear_regression(x: Array2<f32>, y: Array1<f32>) -> Result<Fit, RegressionError> {
+    fn linear_regression(x: Array2<f32>, y: Array1<f32>) -> Result<(), RegressionError> {
         // The design matrix can optionally be standardized, where the mean of each independent
         // variable is subtracted and each is then divided by the standard deviation of that variable.
         let data_x = standardize(x);
@@ -38,7 +37,7 @@ mod tests {
         let fit = model.fit()?;
         // Currently the result is a simple array of the MLE estimators, including the intercept term.
         println!("Fit result: {}", fit.result);
-        Ok(fit)
+        Ok(())
     }
 
     // Fit a regular least-squares regression using the selected
