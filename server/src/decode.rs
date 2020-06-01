@@ -40,18 +40,12 @@ mod tests {
         Ok(())
     }
 
-    // Fit a regular least-squares regression using the selected
-    // variables to estimate counts, their standard errors and
-    // p-values.
-    fn least_square_regression() {}
-
-    /*
-    We need to do regress(X, Y).L2_regularization(lambda)
-    Where X and Y are data, lambda is a hyperparameter (the default in Numpy/scikit is 1 so start with that maybe)
-    */
-    #[test]
-    fn test() -> Result<(), RegressionError> {
-        let bv = BitVec::from_bytes(&[0b10100000, 0b00010010]);
+    //Estimate the number of times each bit i within cohort
+    //j, tij , is truly set in B for each cohort. Given the
+    //number of times each bit i in cohort j, cij was set in
+    //a set of Nj reports, the estimate is given by
+    //Let Y be a vector of tij s, i  [1, k], j  [1, m].
+    fn estimate_y(bv: BitVec) -> Vec<Array1<f32>> {
         let k = bv.len(); // size of filter
         let h = 1.; // number of hash functions
         let f = 0.5; // permanent response randomizer
@@ -67,7 +61,7 @@ mod tests {
 
         let init = || Array1::<f32>::zeros(k);
 
-        let mut reported_counts_by_cohort = cohorts
+        let reported_counts_by_cohort = cohorts
             .iter()
             .map(|cohort| {
                 cohort
@@ -77,6 +71,7 @@ mod tests {
             .collect::<Vec<Array1<f32>>>(); // TODO need to capture number of reports per cohort here too
         let n = 1.; // cheating here hard coding to 1 report per cohort
 
+        // this is y, pass it along
         let estimated_true_counts_by_cohort = reported_counts_by_cohort
             .iter()
             .map(|counts| {
@@ -85,6 +80,24 @@ mod tests {
                 })
             })
             .collect::<Vec<Array1<f32>>>();
+
+        estimated_true_counts_by_cohort
+    }
+
+    // Fit a regular least-squares regression using the selected
+    // variables to estimate counts, their standard errors and
+    // p-values.
+    fn least_square_regression() {}
+
+    /*
+    We need to do regress(X, Y).L2_regularization(lambda)
+    Where X and Y are data, lambda is a hyperparameter (the default in Numpy/scikit is 1 so start with that maybe)
+    */
+    #[test]
+    fn test() -> Result<(), RegressionError> {
+        // test case
+        let bv = BitVec::from_bytes(&[0b10100000, 0b00010010]);
+        estimate_y(bv);
         Ok(())
     }
 
