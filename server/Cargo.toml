@@ -11,5 +11,4 @@ rocket = "0.4.4"
 bit-vec = "0.6.1"
 
 ndarray = { version = "0.13", features = ["blas"]}
-#blas-src = { version = "0.4", default-features = false, features = ["openblas"] }
-#ndarray-glm = { version = "0.0.6", features = ["openblas-static"] }
+ndarray-rand = "0.11.0"
