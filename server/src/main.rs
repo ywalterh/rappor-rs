@@ -1,11 +1,12 @@
 #![feature(proc_macro_hygiene, decl_macro)]
 
 extern crate ndarray;
-extern crate ndarray_glm;
 
-#[macro_use] extern crate rocket;
+#[macro_use]
+extern crate rocket;
 
 pub mod decode;
+mod lasso;
 
 #[get("/")]
 fn index() -> &'static str {
@@ -24,5 +25,7 @@ fn result() -> &'static str {
 }
 
 fn main() {
-    rocket::ignite().mount("/", routes![index, report, result]).launch();
+    rocket::ignite()
+        .mount("/", routes![index, report, result])
+        .launch();
 }

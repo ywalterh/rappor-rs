@@ -4,8 +4,6 @@ use ndarray::Array1;
 use ndarray::Array2;
 use ndarray::ArrayBase;
 use ndarray::*;
-use ndarray_glm::error::RegressionError;
-use ndarray_glm::{linear::Linear, model::ModelBuilder, standardize::standardize};
 
 #[cfg(test)]
 mod tests {
@@ -23,20 +21,7 @@ mod tests {
     // producce a fit result Y of X
     // TODO fix to use lasso here, or at least something similar
     // select candidate strings corresponding to non-zero coefficients.
-    fn linear_regression(x: Array2<f32>, y: Array1<f32>) -> Result<(), RegressionError> {
-        // The design matrix can optionally be standardized, where the mean of each independent
-        // variable is subtracted and each is then divided by the standard deviation of that variable.
-        let data_x = standardize(x);
-
-        // The model is generic over floating point type for the independent data variables.
-        // If the second argument is blank (`_`), it will be inferred if possible.
-        // L2 regularization can be applied with l2_reg().
-        let model = ModelBuilder::<Linear>::data(y.view(), data_x.view())
-            .l2_reg(1e-5)
-            .build()?;
-        let fit = model.fit()?;
-        // Currently the result is a simple array of the MLE estimators, including the intercept term.
-        println!("Fit result: {}", fit.result);
+    fn linear_regression(x: Array2<f32>, y: Array1<f32>) -> Result<(), ErrorKind> {
         Ok(())
     }
 
@@ -94,7 +79,7 @@ mod tests {
     Where X and Y are data, lambda is a hyperparameter (the default in Numpy/scikit is 1 so start with that maybe)
     */
     #[test]
-    fn test() -> Result<(), RegressionError> {
+    fn test() -> Result<(), ErrorKind> {
         // test case
         let bv = BitVec::from_bytes(&[0b10100000, 0b00010010]);
         estimate_y(bv);
@@ -102,7 +87,7 @@ mod tests {
     }
 
     #[test]
-    fn test_regression() -> Result<(), RegressionError> {
+    fn test_regression() -> Result<(), ErrorKind> {
         // define some test data
         let data_y = array![0.3, 1.3, 0.7];
         let data_x = array![[0.1, 0.2], [-0.4, 0.1], [0.2, 0.4]];
