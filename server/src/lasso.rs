@@ -3,6 +3,8 @@
 // converting this into a test case and use the same strategy but written in rust
 // https://github.com/J3FALL/LASSO-Regression/blob/master/lasso.py
 use ndarray::*;
+use ndarray_rand::rand_distr::Uniform;
+use ndarray_rand::RandomExt;
 use std::f64::consts::PI;
 
 fn linear_regression(x: Array2<f32>, y: Array1<f32>) -> Result<(), ErrorKind> {
@@ -47,11 +49,17 @@ mod tests {
 
         // initialize X 2D array with 60 x 16
         let mut X = Array2::<f64>::zeros((x.len(), 16));
+        let mut j = 0;
         for mut row in X.genrows_mut() {
-            row[0] = x.get(idx)?;
+            // whuuuut???
+            let x_val = *x.get(j).unwrap();
+            row[0] = x_val;
             for i in 1..row.len() {
-                row[i] = 
+                row[i] = row[i - 1] * x_val;
             }
         }
+
+        // randomize Y
+        let mut Y = x.mapv(f64::sin) + Array::random((1, 60), Uniform::new(0., 0.15));
     }
 }
