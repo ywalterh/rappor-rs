@@ -46,8 +46,13 @@ fn coordinate_descent_step(
     weights: Array1<f64>,
     l1_penalty: f64,
 ) {
+    let output = Array1::<f64>::zeros(60);
+    let predication = Array1::<f64>::zeros(60);
+
+    let i = 0;
     for col in x.gencolumns() {
-        x.column(index)
+        let ro_i = (col.dot((output - predication * weights.get(i).unwrap() * col))).sum();
+        i = i + 1;
     }
 }
 
