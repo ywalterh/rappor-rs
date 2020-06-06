@@ -51,7 +51,7 @@ fn coordinate_descent_step(
 
     let i = 0;
     for col in x.gencolumns() {
-        let ro_i = (col.dot((output - predication * weights.get(i).unwrap() * col))).sum();
+        let ro_i = (col.dot(&(output - predication + *weights.get(i).unwrap() * col))).sum();
         i = i + 1;
     }
 }
