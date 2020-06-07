@@ -19,40 +19,50 @@ fn normalize_features(x: Array2<f64>) -> Array2<f64> {
     return n;
 }
 
-/*
-def lasso_coordinate_descent_step(num_features, feature_matrix, output, weights, l1_penalty):
-    # compute prediction prediction = predict_output(feature_matrix, weights)
-    # z_i= (feature_matrix*feature_matrix).sum()
-
-    for i in range(num_features + 1):
-        # compute ro[i] = SUM[ [feature_i]*(output - prediction + weight[i]*[feature_i]) ]
-        ro_i = (feature_matrix[:, i] * (output - prediction + weights[i] * feature_matrix[:, i])).sum()
-
-        print("RO %d: : %f" % (i, ro_i))
-        if i == 0:  # intercept -- do not regularize
-            new_weight_i = ro_i
-        elif ro_i < -l1_penalty / 2.:
-            new_weight_i = (ro_i + (l1_penalty / 2))
-        elif ro_i > l1_penalty / 2.:
-            new_weight_i = (ro_i - (l1_penalty / 2))
-        else:
-            new_weight_i = 0.
-
-    return new_weight_i
- */
 fn coordinate_descent_step(
-    num_features: u32,
-    x: Array2<f64>,
+    num_features: usize,
+    feature_matrix: Array2<f64>,
+    output: Array1<f64>,
     weights: Array1<f64>,
     l1_penalty: f64,
-) {
-    let output = Array1::<f64>::zeros(60);
+) -> f64 {
     let predication = Array1::<f64>::zeros(60);
 
-    let i = 0;
-    for col in x.gencolumns() {
-        let ro_i = (col.dot(&(output - predication + *weights.get(i).unwrap() * col))).sum();
-        i = i + 1;
+    let mut new_weight_i = 0.;
+    for i in 0..(num_features + 1) {
+        let col = feature_matrix.column(i);
+        //XXX walterh - spent too much time deal with this ling
+        // please read ndarray-rs Binary Opertors between arrays and scalar
+        let ro_i = (&col * &(&output - &predication + weights[i] * &col)).sum();
+        if i == 0 {
+            new_weight_i = ro_i
+        } else if ro_i < -l1_penalty / 2. {
+            new_weight_i = ro_i + (l1_penalty / 2.);
+        } else if ro_i > l1_penalty / 2. {
+            new_weight_i = ro_i - (l1_penalty / 2.);
+        } else {
+            new_weight_i = 0.;
+        }
+    }
+
+    new_weight_i
+}
+
+fn cyclical_coordinate_descnet(
+    feature_matrix: Array2<f64>,
+    output: Array1<f64>,
+    initial_weights: Array1<f64>,
+    l1_penalty: f64,
+    tolerance: f64,
+) {
+    let mut condition = true;
+    while condition {
+        let mut max_change = 0;
+        for i in 0..initial_weights.len() {
+            let old_weight_i = initial_weights[i];
+            initial_weights[i] =
+                coordinate_descent_step(i, feature_matrix, output, initial_weights, l1_penalty);
+        }
     }
 }
 
