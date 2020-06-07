@@ -21,9 +21,9 @@ fn normalize_features(x: Array2<f64>) -> Array2<f64> {
 
 fn coordinate_descent_step(
     num_features: usize,
-    feature_matrix: Array2<f64>,
-    output: Array1<f64>,
-    weights: Array1<f64>,
+    feature_matrix: &Array2<f64>,
+    output: &Array1<f64>,
+    weights: &Array1<f64>,
     l1_penalty: f64,
 ) -> f64 {
     let predication = Array1::<f64>::zeros(60);
@@ -33,7 +33,7 @@ fn coordinate_descent_step(
         let col = feature_matrix.column(i);
         //XXX walterh - spent too much time deal with this ling
         // please read ndarray-rs Binary Opertors between arrays and scalar
-        let ro_i = (&col * &(&output - &predication + weights[i] * &col)).sum();
+        let ro_i = (&col * &(output - &predication + weights[i] * &col)).sum();
         if i == 0 {
             new_weight_i = ro_i
         } else if ro_i < -l1_penalty / 2. {
@@ -54,16 +54,26 @@ fn cyclical_coordinate_descnet(
     initial_weights: Array1<f64>,
     l1_penalty: f64,
     tolerance: f64,
-) {
+) -> Array1<f64> {
     let mut condition = true;
+    let mut weights = initial_weights.clone();
     while condition {
-        let mut max_change = 0;
-        for i in 0..initial_weights.len() {
+        let mut max_change = 0.;
+        for i in 0..weights.len() {
             let old_weight_i = initial_weights[i];
-            initial_weights[i] =
-                coordinate_descent_step(i, feature_matrix, output, initial_weights, l1_penalty);
+            weights[i] = coordinate_descent_step(i, &feature_matrix, &output, &weights, l1_penalty);
+            let coordinate_change = (old_weight_i - weights[i]).abs();
+
+            if coordinate_change > max_change {
+                max_change = coordinate_change
+            }
+        }
+        if max_change < tolerance {
+            condition = false;
         }
     }
+
+    weights
 }
 
 fn get_weights() -> Array1<f64> {
@@ -124,6 +134,11 @@ mod tests {
         // randomize Y
         let mut Y = x.mapv(f64::sin) + Array::random((1, 60), Uniform::new(0., 0.15));
 
+        let l1_penalty = 0.01;
+        let tolerance = 0.01;
+
+        let weights = cyclical_coordinate_descnet(X, Y, get_weights(), l1_penalty, tolerance);
+        println!("{}", weights);
         // make sure the model (weights) returned is what we got from python or C++
         let real_weights = array![
             34.2442, -44.6799, 0., 0., 0., 5.22371, 5.47178, 0.586693, 0., 0., 0., 0., 0., 0., 0.,
