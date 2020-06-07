@@ -19,6 +19,10 @@ fn normalize_features(x: Array2<f64>) -> Array2<f64> {
     return n;
 }
 
+fn predict_output(feature_matrix: &Array2<f64>, weights: &Array1<f64>) -> Array1<f64> {
+    return feature_matrix.dot(weights);
+}
+
 fn coordinate_descent_step(
     num_features: usize,
     feature_matrix: &Array2<f64>,
@@ -26,15 +30,15 @@ fn coordinate_descent_step(
     weights: &Array1<f64>,
     l1_penalty: f64,
 ) -> f64 {
-    let predication = Array1::<f64>::zeros(60);
+    let predication = predict_output(feature_matrix, weights);
 
     let mut new_weight_i = 0.;
     for i in 0..(num_features + 1) {
         let col = feature_matrix.column(i);
-        //XXX walterh - spent too much time deal with this ling
+        //XXX walterh - spent too much time deal with this line
         // please read ndarray-rs Binary Opertors between arrays and scalar
         let ro_i = (&col * &(output - &predication + weights[i] * &col)).sum();
-        println!("RO {}, {}", i, ro_i);
+        //println!("RO {} : {}", i, ro_i);
         if i == 0 {
             new_weight_i = ro_i
         } else if ro_i < -l1_penalty / 2. {
@@ -58,11 +62,13 @@ fn cyclical_coordinate_descent(
 ) -> Array1<f64> {
     let mut condition = true;
     let mut weights = initial_weights.clone();
+
     let mut tries = 0;
     while condition {
-        if tries > 50 {
-            panic!("try more than 50 times")
+        if tries > 1000 {
+            panic!("Tried more than 100 times")
         }
+        tries = tries + 1;
 
         let mut max_change = 0.;
         for i in 0..weights.len() {
@@ -74,11 +80,11 @@ fn cyclical_coordinate_descent(
                 max_change = coordinate_change
             }
         }
+
+        println!("max_change : {}", max_change);
         if max_change < tolerance {
             condition = false;
         }
-
-        tries = tries + 1;
     }
 
     weights
@@ -125,6 +131,9 @@ mod tests {
                 row[i] = row[i - 1] * x_val;
             }
         }
+
+        X = normalize_features(X);
+        println!("{}", X);
 
         // randomize Y
         let Y = x.mapv(f64::sin) + Array::random(60, Uniform::new(0., 0.15));
