@@ -48,7 +48,7 @@ fn coordinate_descent_step(
     new_weight_i
 }
 
-fn cyclical_coordinate_descnet(
+fn cyclical_coordinate_descent(
     feature_matrix: Array2<f64>,
     output: Array1<f64>,
     initial_weights: Array1<f64>,
@@ -57,7 +57,12 @@ fn cyclical_coordinate_descnet(
 ) -> Array1<f64> {
     let mut condition = true;
     let mut weights = initial_weights.clone();
+    let mut tries = 0;
     while condition {
+        if tries > 50 {
+            panic!("try more than 50 times")
+        }
+
         let mut max_change = 0.;
         for i in 0..weights.len() {
             let old_weight_i = initial_weights[i];
@@ -71,6 +76,8 @@ fn cyclical_coordinate_descnet(
         if max_change < tolerance {
             condition = false;
         }
+
+        tries = tries + 1;
     }
 
     weights
@@ -124,20 +131,22 @@ mod tests {
         let mut j = 0;
         for mut row in X.genrows_mut() {
             // whuuuut???
-            let x_val = *x.get(j).unwrap();
+            let x_val = x[j];
             row[0] = x_val;
             for i in 1..row.len() {
                 row[i] = row[i - 1] * x_val;
             }
+            j = j + 1;
         }
 
         // randomize Y
-        let mut Y = x.mapv(f64::sin) + Array::random((1, 60), Uniform::new(0., 0.15));
+        let mut Y = x.mapv(f64::sin) + Array::random(60, Uniform::new(0., 0.15));
 
+        println!("{}", X);
         let l1_penalty = 0.01;
         let tolerance = 0.01;
 
-        let weights = cyclical_coordinate_descnet(X, Y, get_weights(), l1_penalty, tolerance);
+        let weights = cyclical_coordinate_descent(X, Y, get_weights(), l1_penalty, tolerance);
         println!("{}", weights);
         // make sure the model (weights) returned is what we got from python or C++
         let real_weights = array![
