@@ -66,13 +66,13 @@ fn cyclical_coordinate_descent(
     let mut tries = 0;
     while condition {
         if tries > 1000 {
-            panic!("Tried more than 100 times")
+            panic!("Tried more than 1000 times. A bug in the code most likely")
         }
         tries = tries + 1;
 
         let mut max_change = 0.;
         for i in 0..weights.len() {
-            let old_weight_i = initial_weights[i];
+            let old_weight_i = weights[i];
             weights[i] = coordinate_descent_step(i, &feature_matrix, &output, &weights, l1_penalty);
             let coordinate_change = (old_weight_i - weights[i]).abs();
 
