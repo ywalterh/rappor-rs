@@ -34,6 +34,7 @@ fn coordinate_descent_step(
         //XXX walterh - spent too much time deal with this ling
         // please read ndarray-rs Binary Opertors between arrays and scalar
         let ro_i = (&col * &(output - &predication + weights[i] * &col)).sum();
+        println!("RO {}, {}", i, ro_i);
         if i == 0 {
             new_weight_i = ro_i
         } else if ro_i < -l1_penalty / 2. {
@@ -104,18 +105,6 @@ mod tests {
         linear_regression(data_x, data_y);
     }
 
-    /*
-    copy test setup from the example python script
-    x = np.array([i * np.pi / 180 for i in range(60, 300, 4)])
-
-    X = np.zeros((len(x), 16))
-    for idx in range(len(x)):
-        X[idx, 0] = x[idx]
-        for j in range(1, 16):
-            X[idx, j] = X[idx, j - 1] * x[idx]
-
-    np.random.seed(10)
-    Y = np.sin(x) + np.random.normal(0, 0.15, len(x)) */
     #[test]
     fn test_more_complicated() {
         // initialize x
@@ -128,21 +117,17 @@ mod tests {
 
         // initialize X 2D array with 60 x 16
         let mut X = Array2::<f64>::zeros((x.len(), 16));
-        let mut j = 0;
-        for mut row in X.genrows_mut() {
-            // whuuuut???
+        for j in 0..x.len() {
+            let mut row = X.row_mut(j);
             let x_val = x[j];
             row[0] = x_val;
             for i in 1..row.len() {
                 row[i] = row[i - 1] * x_val;
             }
-            j = j + 1;
         }
 
         // randomize Y
-        let mut Y = x.mapv(f64::sin) + Array::random(60, Uniform::new(0., 0.15));
-
-        println!("{}", X);
+        let Y = x.mapv(f64::sin) + Array::random(60, Uniform::new(0., 0.15));
         let l1_penalty = 0.01;
         let tolerance = 0.01;
 
