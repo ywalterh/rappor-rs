@@ -1,6 +1,8 @@
 # fuzzy-men
 Implement simple RAPPOR in both client and server side
 
+![](https://github.com/ywalterh/fuzzy-men/workflows/Rust/badge.svg)
+
 ## High level requirement
 * Basic RAPPOR implementation in client with rust and WASM
 * Basic learning backend implement in rust and some web analytics technologoty
