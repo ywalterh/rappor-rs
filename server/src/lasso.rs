@@ -133,7 +133,6 @@ mod tests {
         }
 
         X = normalize_features(X);
-        println!("{}", X);
 
         // randomize Y
         let Y = x.mapv(f64::sin) + Array::random(60, Uniform::new(0., 0.15));
@@ -141,11 +140,23 @@ mod tests {
         let tolerance = 0.01;
 
         let weights = cyclical_coordinate_descent(X, Y, get_weights(), l1_penalty, tolerance);
-        println!("{}", weights);
         // make sure the model (weights) returned is what we got from python or C++
         let real_weights = array![
             34.2442, -44.6799, 0., 0., 0., 5.22371, 5.47178, 0.586693, 0., 0., 0., 0., 0., 0., 0.,
             -1.61534
         ];
+
+        let mut delta_sum = 0.;
+        for i in 0..weights.len() {
+            delta_sum = delta_sum + (weights[i] - real_weights[i]).abs();
+        }
+
+        assert!(
+            delta_sum < 0.01,
+            format!(
+                "Too different from real weights, getting \n{}\nexpected \n{}\n",
+                weights, real_weights
+            )
+        );
     }
 }
