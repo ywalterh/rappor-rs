@@ -128,6 +128,7 @@ mod tests {
         }
 
         X = normalize_features(X);
+        let feature_matrix = X.clone();
 
         // randomize Y
         // let Y = x.mapv(f64::sin) + Array::random(60, Uniform::new(0., 0.15));
@@ -226,10 +227,89 @@ mod tests {
         }
 
         assert!(
-            delta_sum < 20.0,
+            delta_sum < 5.,
             format!(
                 "Too different from real weights {}, getting \n{}\nexpected \n{}\n",
                 delta_sum, weights, real_weights
+            )
+        );
+
+        // also compare the result to sklearn lasso implementation
+        // it can only make predications, so compare predications
+        let sklearn_predication = array![
+            1.00037868,
+            0.99713958,
+            0.99318062,
+            0.98839889,
+            0.98268459,
+            0.97592131,
+            0.96798647,
+            0.95875172,
+            0.94808359,
+            0.93584415,
+            0.92189185,
+            0.90608248,
+            0.88827024,
+            0.86830903,
+            0.84605384,
+            0.82136235,
+            0.79409669,
+            0.76412545,
+            0.73132578,
+            0.69558587,
+            0.65680746,
+            0.61490873,
+            0.56982731,
+            0.52152357,
+            0.46998408,
+            0.41522533,
+            0.35729755,
+            0.29628876,
+            0.23232885,
+            0.16559378,
+            0.09630969,
+            0.02475698,
+            -0.04872593,
+            -0.12373916,
+            -0.1998185,
+            -0.27643334,
+            -0.3529856,
+            -0.42881006,
+            -0.50317638,
+            -0.57529341,
+            -0.64431616,
+            -0.70935621,
+            -0.76949618,
+            -0.82380937,
+            -0.87138527,
+            -0.91136247,
+            -0.94297012,
+            -0.96557976,
+            -0.97876914,
+            -0.98240044,
+            -0.97671515,
+            -0.96244858,
+            -0.9409671,
+            -0.91443189,
+            -0.88599342,
+            -0.86002131,
+            -0.84237512,
+            -0.84072207,
+            -0.86490877,
+            -0.92739459
+        ];
+
+        let my_predication = predict_output(&feature_matrix, &weights);
+        let mut delta_sum = 0.;
+        for i in 0..weights.len() {
+            delta_sum = delta_sum + (my_predication[i] - sklearn_predication[i]).abs();
+        }
+
+        assert!(
+            delta_sum < 1.,
+            format!(
+                "Too different from real predication {}, getting \n{}\nexpected \n{}\n",
+                delta_sum, my_predication, sklearn_predication
             )
         );
     }
