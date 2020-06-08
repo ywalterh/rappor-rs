@@ -5,12 +5,20 @@
 use ndarray::*;
 use ndarray_linalg::norm::normalize;
 use ndarray_linalg::norm::NormalizeAxis;
-use ndarray_rand::rand_distr::Normal;
-use ndarray_rand::RandomExt;
-use std::f64::consts::PI;
 
-fn linear_regression(x: Array2<f64>, y: Array1<f64>) -> Result<(), ErrorKind> {
-    Ok(())
+// get feature matrix as x, and output as y
+// return weights
+pub fn lasso_regression(x: Array2<f64>, y: Array1<f64>) -> Result<Array1<f64>, ErrorKind> {
+    let l1_penalty = 0.01;
+    let tolerance = 0.01;
+    let x_normalized = normalize_features(x);
+    Ok(cyclical_coordinate_descent(
+        x_normalized,
+        y,
+        get_weights(),
+        l1_penalty,
+        tolerance,
+    ))
 }
 
 // this is L2??
@@ -95,18 +103,10 @@ fn get_weights() -> Array1<f64> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::f64::consts::PI;
 
     #[test]
     fn test_lasso() {
-        let data_y = array![0.3, 1.3, 0.7];
-        let data_x = array![[0.1, 0.2], [-0.4, 0.1], [0.2, 0.4]];
-
-        // use our regression
-        linear_regression(data_x, data_y);
-    }
-
-    #[test]
-    fn test_more_complicated() {
         // initialize x
         let mut x = Array1::<f64>::zeros(60);
         for mut row in x.genrows_mut() {
@@ -118,23 +118,23 @@ mod tests {
         }
 
         // initialize X 2D array with 60 x 16
-        let mut X = Array2::<f64>::zeros((x.len(), 16));
+        let mut x_matrix = Array2::<f64>::zeros((x.len(), 16));
         for j in 0..x.len() {
-            let mut row = X.row_mut(j);
+            let mut row = x_matrix.row_mut(j);
             row[0] = x[j];
             for i in 1..row.len() {
                 row[i] = row[i - 1] * x[j];
             }
         }
 
-        X = normalize_features(X);
-        let feature_matrix = X.clone();
+        x_matrix = normalize_features(x_matrix);
+        let feature_matrix = x_matrix.clone();
 
         // randomize Y
         // let Y = x.mapv(f64::sin) + Array::random(60, Uniform::new(0., 0.15));
         //
         // use fix Y instead, why introduce sporadic in testing
-        let Y = array![
+        let outputs = array![
             1.06576338,
             1.00608589,
             0.69537381,
@@ -200,7 +200,8 @@ mod tests {
         let l1_penalty = 0.01;
         let tolerance = 0.01;
 
-        let weights = cyclical_coordinate_descent(X, Y, get_weights(), l1_penalty, tolerance);
+        let weights =
+            cyclical_coordinate_descent(x_matrix, outputs, get_weights(), l1_penalty, tolerance);
         // make sure the model (weights) returned is what we got from python or C++
         let real_weights = array![
             30.068216996847337,
