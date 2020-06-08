@@ -5,7 +5,7 @@
 use ndarray::*;
 use ndarray_linalg::norm::normalize;
 use ndarray_linalg::norm::NormalizeAxis;
-use ndarray_rand::rand_distr::Uniform;
+use ndarray_rand::rand_distr::Normal;
 use ndarray_rand::RandomExt;
 use std::f64::consts::PI;
 
@@ -63,13 +63,7 @@ fn cyclical_coordinate_descent(
     let mut condition = true;
     let mut weights = initial_weights.clone();
 
-    let mut tries = 0;
     while condition {
-        if tries > 1000 {
-            panic!("Tried more than 1000 times. A bug in the code most likely")
-        }
-        tries = tries + 1;
-
         let mut max_change = 0.;
         for i in 0..weights.len() {
             let old_weight_i = weights[i];
@@ -81,7 +75,6 @@ fn cyclical_coordinate_descent(
             }
         }
 
-        println!("max_change : {}", max_change);
         if max_change < tolerance {
             condition = false;
         }
@@ -95,6 +88,7 @@ fn get_weights() -> Array1<f64> {
     for mut row in weights.genrows_mut() {
         row.fill(0.5);
     }
+
     return weights;
 }
 
@@ -115,35 +109,50 @@ mod tests {
     fn test_more_complicated() {
         // initialize x
         let mut x = Array1::<f64>::zeros(60);
-        let mut i = 60_f64;
         for mut row in x.genrows_mut() {
-            row.fill(i * PI / 180_f64);
-            i = i + 4_f64;
+            let mut j = 60.0;
+            for i in 0..row.len() {
+                row[i] = j * PI / 180_f64;
+                j = j + 4.0;
+            }
         }
 
         // initialize X 2D array with 60 x 16
         let mut X = Array2::<f64>::zeros((x.len(), 16));
         for j in 0..x.len() {
             let mut row = X.row_mut(j);
-            let x_val = x[j];
-            row[0] = x_val;
+            row[0] = x[j];
             for i in 1..row.len() {
-                row[i] = row[i - 1] * x_val;
+                row[i] = row[i - 1] * x[j];
             }
         }
 
         X = normalize_features(X);
 
         // randomize Y
-        let Y = x.mapv(f64::sin) + Array::random(60, Uniform::new(0., 0.15));
+        let Y = x.mapv(f64::sin) + Array::random(60, Normal::new(0., 0.15).unwrap());
         let l1_penalty = 0.01;
         let tolerance = 0.01;
 
         let weights = cyclical_coordinate_descent(X, Y, get_weights(), l1_penalty, tolerance);
         // make sure the model (weights) returned is what we got from python or C++
         let real_weights = array![
-            34.2442, -44.6799, 0., 0., 0., 5.22371, 5.47178, 0.586693, 0., 0., 0., 0., 0., 0., 0.,
-            -1.61534
+            30.068216996847337,
+            -34.433605927665084,
+            -8.344245977622037,
+            0.,
+            2.56660336442419,
+            3.9890280109854217,
+            3.119234805950629,
+            2.0726629033639665,
+            1.187156437842501,
+            0.42083617225270087,
+            0.,
+            0.,
+            0.,
+            0.,
+            -0.7679035712433514,
+            -1.316257337552551
         ];
 
         let mut delta_sum = 0.;
@@ -152,10 +161,10 @@ mod tests {
         }
 
         assert!(
-            delta_sum < 0.01,
+            delta_sum < 20.0,
             format!(
-                "Too different from real weights, getting \n{}\nexpected \n{}\n",
-                weights, real_weights
+                "Too different from real weights {}, getting \n{}\nexpected \n{}\n",
+                delta_sum, weights, real_weights
             )
         );
     }
