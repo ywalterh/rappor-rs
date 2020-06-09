@@ -1,5 +1,5 @@
 [package]
-name = "server"
+name = "decoder"
 version = "0.1.0"
 authors = ["walterh <waltermwfs@gmail.com>"]
 edition = "2018"
@@ -7,6 +7,8 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-rocket = "0.4.4"
 bit-vec = "0.6.1"
-decoder = { path = "../decoder" }
+
+ndarray = "0.13"
+ndarray-linalg = { git = "https://github.com/rust-ndarray/ndarray-linalg", features = ["openblas"]}
+ndarray-rand = "0.11.0"

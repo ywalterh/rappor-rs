@@ -1,12 +1,8 @@
 #![feature(proc_macro_hygiene, decl_macro)]
-
-extern crate ndarray;
-
 #[macro_use]
 extern crate rocket;
 
-pub mod decode;
-mod lasso;
+extern crate decoder;
 
 #[get("/")]
 fn index() -> &'static str {
