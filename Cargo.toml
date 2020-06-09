@@ -3,4 +3,6 @@
 members = [
     "server",
     "decoder",
+    "wasm-client",
+    "client"
 ]

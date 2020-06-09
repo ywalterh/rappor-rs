@@ -20,4 +20,3 @@ jobs:
       run: sudo apt update; sudo apt install -y gfortran libopenblas-dev
     - name: Build
       run: cargo test --verbose
-      working-directory: server
