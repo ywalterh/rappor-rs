@@ -1,5 +1,4 @@
-mod client;
-
+use client::encode;
 use wasm_bindgen::prelude::*;
 
 // When the `wee_alloc` feature is enabled, use `wee_alloc` as the global
@@ -14,10 +13,10 @@ extern "C" {
 }
 
 #[wasm_bindgen]
-pub async fn greet(input: String)  -> Result<JsValue, JsValue> {
+pub async fn greet(input: String) -> Result<JsValue, JsValue> {
     init_panic_hook();
     // add more code here
-    let f = client::Factory::new(0.01);
+    let f = encode::Factory::new(0.01);
     let result = f.process(input);
     // use rest API call to communicate with server
     let res = reqwest::Client::new()
@@ -25,11 +24,20 @@ pub async fn greet(input: String)  -> Result<JsValue, JsValue> {
         .body(result)
         .header("Access-Control-Allow-Origin", "*")
         .send()
-        .await?;
-    
-    let text = res.text().await?;
-    alert(format!("Reported {}", text).as_str());
-    Ok(JsValue::from_str(&text))
+        .await;
+    match res {
+        Ok(res) => {
+            let text = res.text().await;
+            match text {
+                Ok(text) => {
+                    alert(format!("Reported {}", text).as_str());
+                    Ok(JsValue::from_str(&text))
+                }
+                Err(err) => Err(JsValue::from_str(err.to_string().as_str())),
+            }
+        }
+        Err(err) => Err(JsValue::from_str(err.to_string().as_str())),
+    }
 }
 
 #[wasm_bindgen]
