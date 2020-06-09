@@ -30,7 +30,7 @@ mod tests {
     //number of times each bit i in cohort j, cij was set in
     //a set of Nj reports, the estimate is given by
     //Let Y be a vector of tij s, i  [1, k], j  [1, m].
-    fn estimate_y(bv: BitVec) -> Vec<Array1<f32>> {
+    fn estimate_y(bv: &BitVec) -> Vec<Array1<f32>> {
         let k = bv.len(); // size of filter
         let h = 1.; // number of hash functions
         let f = 0.5; // permanent response randomizer
@@ -80,9 +80,28 @@ mod tests {
     */
     #[test]
     fn test() -> Result<(), ErrorKind> {
+        // let's say we have five candidate strings
+        // and we received cohort from a particular report
+
         // test case
         let bv = BitVec::from_bytes(&[0b10100000, 0b00010010]);
-        estimate_y(bv);
+        let y = estimate_y(&bv);
+
+        // create design matrix X of size km X M where M is the number of candidate strings
+        // the matrix is 1 if bloom filter bits for each string for each cohort
+        // in our case, we probably have k = 1, because we are lazy and only one cohort
+        // let's say M = 5 for this test
+        let mut x = Array2::<f64>::zeros((bv.len(), 5));
+        for mut row in x.genrows_mut() {
+            for i in 0..row.len() {
+                if bv[i] {
+                    row[i] = 1.;
+                } else {
+                    row[i] = 0.;
+                }
+            }
+        }
+
         Ok(())
     }
 
