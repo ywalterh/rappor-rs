@@ -1,7 +1,8 @@
 #![feature(proc_macro_hygiene, decl_macro)]
-
 #[macro_use]
 extern crate rocket;
+
+extern crate decoder;
 
 #[get("/")]
 fn index() -> &'static str {

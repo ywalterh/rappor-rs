@@ -9,3 +9,4 @@ edition = "2018"
 [dependencies]
 rocket = "0.4.4"
 bit-vec = "0.6.1"
+decoder = { path = "../decoder" }
