@@ -50,8 +50,7 @@ fn create_design_matrx() -> Array2<f64> {
 //a set of Nj reports, the estimate is given by
 //Let Y be a vector of tij s, i  [1, k], j  [1, m].
 fn estimate_y(bv: &BitVec) -> Vec<Array1<f32>> {
-    let k = bv.len(); // size of filter
-    let h = 1.; // number of hash functions
+    let k = bv.len(); // size of filter let h = 1.; // number of hash functions
     let f = 0.5; // permanent response randomizer
     let p = 0.5; // temporary response randomizer
     let q = 0.5; // temporary response randomizer
@@ -86,6 +85,17 @@ fn estimate_y(bv: &BitVec) -> Vec<Array1<f32>> {
     estimated_true_counts_by_cohort
 }
 
+// likely something received from the web is
+// a string, need to convert it to bitvec
+fn string_to_bitvec(s: String) -> BitVec {
+    // I think I'm sending ones and zeros. let's see
+    let mut bv: BitVec = BitVec::new();
+    for c in s.chars() {
+        bv.push(c == '0');
+    }
+    bv
+}
+
 // Fit a regular least-squares regression using the selected
 // variables to estimate counts, their standard errors and
 // p-values.
@@ -98,6 +108,21 @@ mod tests {
     #[test]
     fn test_create_matrix() {
         create_design_matrx();
+    }
+
+    #[test]
+    fn test_string_to_bitvec() {
+        // give me a y!
+        // translate
+        let encode_factory = encode::Factory::new(0.01);
+        let encoded = encode_factory.process("a".into());
+        let bv = string_to_bitvec(encoded);
+        assert_eq!(bv.len(), 921);
+    }
+
+    #[test]
+    fn test_fit_model() {
+        //let y = estimate_y(initial);
     }
 
     /*
