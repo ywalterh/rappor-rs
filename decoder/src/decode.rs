@@ -23,7 +23,7 @@ fn linear_regression(x: Array2<f32>, y: Array1<f32>) -> Result<(), ErrorKind> {
     Ok(())
 }
 
-fn create_design_matrx() -> Array2<f64> {
+fn create_design_matrix() -> Array2<f64> {
     let candidate_strings = ["a", "b", "c", "d", "e"];
     // what's 32?
     let mut design_matrix = Array2::<f64>::zeros((5, 32));
@@ -107,7 +107,7 @@ mod tests {
 
     #[test]
     fn test_create_matrix() {
-        create_design_matrx();
+        create_design_matrix();
     }
 
     #[test]
@@ -122,7 +122,14 @@ mod tests {
 
     #[test]
     fn test_fit_model() {
-        //let y = estimate_y(initial);
+        let encode_factory = encode::Factory::new(0.01);
+        let encoded = encode_factory.process("a".into());
+        let bv = string_to_bitvec(encoded);
+        let y = estimate_y(&bv);
+
+        // train the model of desigm matrix
+        // the default bahavior of this is five candidate strings
+        let matrix = create_design_matrix();
     }
 
     /*
