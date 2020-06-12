@@ -6,98 +6,104 @@ use ndarray::*;
 use ndarray_linalg::norm::normalize;
 use ndarray_linalg::norm::NormalizeAxis;
 
-// get feature matrix as x, and output as y
-// return weights
-pub fn lasso_regression(x: Array2<f64>, y: Array1<f64>) -> Result<Array1<f64>, ErrorKind> {
-    let l1_penalty = 0.01;
-    let tolerance = 0.01;
-    let x_normalized = normalize_features(x);
-    Ok(cyclical_coordinate_descent(
-        x_normalized,
-        y,
-        get_weights(),
-        l1_penalty,
-        tolerance,
-    ))
+pub struct LassoFactory {
+    weights: Array1<f64>,
 }
 
-// this is L2??
-fn normalize_features(x: Array2<f64>) -> Array2<f64> {
-    let (n, _) = normalize(x, NormalizeAxis::Column);
-    return n;
-}
-
-fn predict_output(feature_matrix: &Array2<f64>, weights: &Array1<f64>) -> Array1<f64> {
-    return feature_matrix.dot(weights);
-}
-
-fn coordinate_descent_step(
-    num_features: usize,
-    feature_matrix: &Array2<f64>,
-    output: &Array1<f64>,
-    weights: &Array1<f64>,
-    l1_penalty: f64,
-) -> f64 {
-    let predication = predict_output(feature_matrix, weights);
-
-    let mut new_weight_i = 0.;
-    for i in 0..(num_features + 1) {
-        let col = feature_matrix.column(i);
-        //XXX walterh - spent too much time deal with this line
-        // please read ndarray-rs Binary Opertors between arrays and scalar
-        let ro_i = (&col * &(output - &predication + weights[i] * &col)).sum();
-        //println!("RO {} : {}", i, ro_i);
-        if i == 0 {
-            new_weight_i = ro_i
-        } else if ro_i < -l1_penalty / 2. {
-            new_weight_i = ro_i + (l1_penalty / 2.);
-        } else if ro_i > l1_penalty / 2. {
-            new_weight_i = ro_i - (l1_penalty / 2.);
-        } else {
-            new_weight_i = 0.;
-        }
-    }
-
-    new_weight_i
-}
-
-fn cyclical_coordinate_descent(
-    feature_matrix: Array2<f64>,
-    output: Array1<f64>,
-    initial_weights: Array1<f64>,
-    l1_penalty: f64,
-    tolerance: f64,
-) -> Array1<f64> {
-    let mut condition = true;
-    let mut weights = initial_weights.clone();
-
-    while condition {
-        let mut max_change = 0.;
-        for i in 0..weights.len() {
-            let old_weight_i = weights[i];
-            weights[i] = coordinate_descent_step(i, &feature_matrix, &output, &weights, l1_penalty);
-            let coordinate_change = (old_weight_i - weights[i]).abs();
-
-            if coordinate_change > max_change {
-                max_change = coordinate_change
-            }
-        }
-
-        if max_change < tolerance {
-            condition = false;
-        }
-    }
-
-    weights
-}
-
-fn get_weights() -> Array1<f64> {
+fn get_initial_weights() -> Array1<f64> {
     let mut weights = Array1::<f64>::zeros(16);
     for mut row in weights.genrows_mut() {
         row.fill(0.5);
     }
 
     return weights;
+}
+
+impl LassoFactory {
+    pub fn new() -> Self {
+        LassoFactory {
+            weights: get_initial_weights(),
+        }
+    }
+
+    // get feature matrix as x, and output as y
+    // return weights
+    pub fn train(&mut self, x: Array2<f64>, y: Array1<f64>) {
+        let l1_penalty = 0.01;
+        let tolerance = 0.01;
+        let x_normalized = self.normalize_features(x);
+        self.cyclical_coordinate_descent(x_normalized, y, l1_penalty, tolerance);
+    }
+
+    // this is L2??
+    fn normalize_features(&self, x: Array2<f64>) -> Array2<f64> {
+        let (n, _) = normalize(x, NormalizeAxis::Column);
+        return n;
+    }
+
+    pub fn predict_output(
+        &self,
+        feature_matrix: &Array2<f64>,
+    ) -> Array1<f64> {
+        return feature_matrix.dot(&self.weights);
+    }
+
+    fn coordinate_descent_step(
+        &self,
+        num_features: usize,
+        feature_matrix: &Array2<f64>,
+        output: &Array1<f64>,
+        l1_penalty: f64,
+    ) -> f64 {
+        let predication = self.predict_output(feature_matrix);
+
+        let mut new_weight_i = 0.;
+        for i in 0..(num_features + 1) {
+            let col = feature_matrix.column(i);
+            //XXX walterh - spent too much time deal with this line
+            // please read ndarray-rs Binary Opertors between arrays and scalar
+            let ro_i = (&col * &(output - &predication + self.weights[i] * &col)).sum();
+            //println!("RO {} : {}", i, ro_i);
+            if i == 0 {
+                new_weight_i = ro_i
+            } else if ro_i < -l1_penalty / 2. {
+                new_weight_i = ro_i + (l1_penalty / 2.);
+            } else if ro_i > l1_penalty / 2. {
+                new_weight_i = ro_i - (l1_penalty / 2.);
+            } else {
+                new_weight_i = 0.;
+            }
+        }
+
+        new_weight_i
+    }
+
+    fn cyclical_coordinate_descent(
+        &mut self,
+        feature_matrix: Array2<f64>,
+        output: Array1<f64>,
+        l1_penalty: f64,
+        tolerance: f64,
+    ) {
+        let mut condition = true;
+        while condition {
+            let mut max_change = 0.;
+            for i in 0..self.weights.len() {
+                let old_weight_i = self.weights[i];
+                self.weights[i] =
+                    self.coordinate_descent_step(i, &feature_matrix, &output, l1_penalty);
+                let coordinate_change = (old_weight_i - self.weights[i]).abs();
+
+                if coordinate_change > max_change {
+                    max_change = coordinate_change
+                }
+            }
+
+            if max_change < tolerance {
+                condition = false;
+            }
+        }
+    }
 }
 
 #[cfg(test)]
@@ -107,6 +113,8 @@ mod tests {
 
     #[test]
     fn test_lasso() {
+        let mut undertest = LassoFactory::new();
+
         // initialize x
         let mut x = Array1::<f64>::zeros(60);
         for mut row in x.genrows_mut() {
@@ -127,7 +135,7 @@ mod tests {
             }
         }
 
-        x_matrix = normalize_features(x_matrix);
+        x_matrix = undertest.normalize_features(x_matrix);
         let feature_matrix = x_matrix.clone();
 
         // randomize Y
@@ -200,8 +208,7 @@ mod tests {
         let l1_penalty = 0.01;
         let tolerance = 0.01;
 
-        let weights =
-            cyclical_coordinate_descent(x_matrix, outputs, get_weights(), l1_penalty, tolerance);
+        undertest.train(x_matrix, outputs);
         // make sure the model (weights) returned is what we got from python or C++
         let real_weights = array![
             30.068216996847337,
@@ -223,15 +230,15 @@ mod tests {
         ];
 
         let mut delta_sum = 0.;
-        for i in 0..weights.len() {
-            delta_sum = delta_sum + (weights[i] - real_weights[i]).abs();
+        for i in 0..undertest.weights.len() {
+            delta_sum = delta_sum + (undertest.weights[i] - real_weights[i]).abs();
         }
 
         assert!(
             delta_sum < 5.,
             format!(
                 "Too different from real weights {}, getting \n{}\nexpected \n{}\n",
-                delta_sum, weights, real_weights
+                delta_sum, undertest.weights, real_weights
             )
         );
 
@@ -300,14 +307,14 @@ mod tests {
             -0.92739459
         ];
 
-        let my_predication = predict_output(&feature_matrix, &weights);
+        let my_predication = undertest.predict_output(&feature_matrix);
         let mut delta_sum = 0.;
-        for i in 0..weights.len() {
+        for i in 0..sklearn_predication.len() {
             delta_sum = delta_sum + (my_predication[i] - sklearn_predication[i]).abs();
         }
 
         assert!(
-            delta_sum < 1.,
+            delta_sum < 2.,
             format!(
                 "Too different from real predication {}, getting \n{}\nexpected \n{}\n",
                 delta_sum, my_predication, sklearn_predication
