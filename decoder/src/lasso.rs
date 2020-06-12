@@ -10,8 +10,8 @@ pub struct LassoFactory {
     weights: Array1<f64>,
 }
 
-fn get_initial_weights() -> Array1<f64> {
-    let mut weights = Array1::<f64>::zeros(16);
+fn get_initial_weights(nums: usize) -> Array1<f64> {
+    let mut weights = Array1::<f64>::zeros(nums);
     for mut row in weights.genrows_mut() {
         row.fill(0.5);
     }
@@ -20,15 +20,15 @@ fn get_initial_weights() -> Array1<f64> {
 }
 
 impl LassoFactory {
-    pub fn new() -> Self {
+    pub fn new(nums: usize) -> Self {
         LassoFactory {
-            weights: get_initial_weights(),
+            weights: get_initial_weights(nums),
         }
     }
 
     // get feature matrix as x, and output as y
     // return weights
-    pub fn train(&mut self, x: Array2<f64>, y: Array1<f64>) {
+    pub fn train(&mut self, x: Array2<f64>, y: &Array1<f64>) {
         let l1_penalty = 0.01;
         let tolerance = 0.01;
         let x_normalized = self.normalize_features(x);
@@ -41,10 +41,7 @@ impl LassoFactory {
         return n;
     }
 
-    pub fn predict_output(
-        &self,
-        feature_matrix: &Array2<f64>,
-    ) -> Array1<f64> {
+    pub fn predict_output(&self, feature_matrix: &Array2<f64>) -> Array1<f64> {
         return feature_matrix.dot(&self.weights);
     }
 
@@ -81,7 +78,7 @@ impl LassoFactory {
     fn cyclical_coordinate_descent(
         &mut self,
         feature_matrix: Array2<f64>,
-        output: Array1<f64>,
+        output: &Array1<f64>,
         l1_penalty: f64,
         tolerance: f64,
     ) {
@@ -113,7 +110,7 @@ mod tests {
 
     #[test]
     fn test_lasso() {
-        let mut undertest = LassoFactory::new();
+        let mut undertest = LassoFactory::new(16);
 
         // initialize x
         let mut x = Array1::<f64>::zeros(60);
@@ -205,10 +202,7 @@ mod tests {
             -0.95312111
         ];
 
-        let l1_penalty = 0.01;
-        let tolerance = 0.01;
-
-        undertest.train(x_matrix, outputs);
+        undertest.train(x_matrix, &outputs);
         // make sure the model (weights) returned is what we got from python or C++
         let real_weights = array![
             30.068216996847337,
