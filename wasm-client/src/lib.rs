@@ -16,7 +16,7 @@ extern "C" {
 pub async fn greet(input: String) -> Result<JsValue, JsValue> {
     init_panic_hook();
     // add more code here
-    let f = encode::Factory::new(0.01);
+    let f = encode::Factory::new(1);
     let result = f.process(input);
     // use rest API call to communicate with server
     let res = reqwest::Client::new()

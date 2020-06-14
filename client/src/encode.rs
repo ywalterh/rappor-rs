@@ -3,28 +3,20 @@ use rand::Rng;
 
 // This contains the client implementation of RAPPOR
 pub struct Factory {
-    k: u32,
-    rate: f32,
+    k: usize,
+    h: u32,
     f: f32,
-    p: u8,
-    q: u8,
 }
 
 impl Factory {
-    pub fn new(rate: f32) -> Self {
-        Factory {
-            k: 32,
-            rate,
-            f: 0.2,
-            p: 1,
-            q: 0,
-        }
+    pub fn new(h: u32) -> Self {
+        Factory { k: 32, h, f: 0.2 }
     }
 
     pub fn initialize_bloom_to_bitarray(&self, value: String) -> BloomFilter {
         // step1: hash client's value v onto Bloom filter B of size k using h hash function
         // let's say k is 32
-        let mut bf = BloomFilter::with_rate(self.rate, self.k);
+        let mut bf = BloomFilter::with_size(self.k, self.h);
         bf.insert(&value);
         return bf;
     }
@@ -52,17 +44,16 @@ impl Factory {
         }
 
         // instant randomized response
-        let mut instant_randomized: Vec<u8> = Vec::<u8>::new();
+        let mut instant_randomized = String::new();
         for b in perm_randomized {
             if b {
-                instant_randomized.push(self.p);
+                instant_randomized.push('1');
             } else {
-                instant_randomized.push(self.q);
+                instant_randomized.push('0');
             }
         }
 
-        // report instant_randomized
-        return format!("{:?}", instant_randomized);
+        return instant_randomized;
     }
 }
 
@@ -72,8 +63,10 @@ mod tests {
 
     #[test]
     fn it_works() {
-        let f = Factory::new(0.01);
+        let f = Factory::new(1);
         let result = f.process("test".into());
         assert_ne!(result, "");
+        println!("{}", result);
+        assert_eq!(result.len(), 32);
     }
 }
