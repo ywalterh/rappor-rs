@@ -16,8 +16,8 @@ fn to_a1(bv: &BitVec) -> Array1<f64> {
 // producce a fit result Y of X
 // TODO fix to use lasso here, or at least something similar
 // select candidate strings corresponding to non-zero coefficients.
-fn linear_regression(x: Array2<f64>, y: Array1<f64>) -> Result<(), ErrorKind> {
-    let encode_factory = encode::Factory::new(0.01);
+fn linear_regression() -> Result<(), ErrorKind> {
+    let encode_factory = encode::Factory::new(1);
     let encoded = encode_factory.process("a".into());
     let bv = string_to_bitvec(encoded);
     let y = estimate_y(&bv);
@@ -36,7 +36,7 @@ fn create_design_matrix() -> Array2<f64> {
     let mut design_matrix = Array2::<f64>::zeros((5, 32));
 
     for i in 0..candidate_strings.len() {
-        let encode_factory = encode::Factory::new(0.01);
+        let encode_factory = encode::Factory::new(1);
         let bf = encode_factory.initialize_bloom_to_bitarray(candidate_strings[i].into());
         let mut row = design_matrix.row_mut(i);
         for j in 0..row.len() {
@@ -121,14 +121,17 @@ mod tests {
     fn test_string_to_bitvec() {
         // give me a y!
         // translate
-        let encode_factory = encode::Factory::new(0.01);
+        let encode_factory = encode::Factory::new(1);
         let encoded = encode_factory.process("a".into());
         let bv = string_to_bitvec(encoded);
-        assert_eq!(bv.len(), 921);
+        assert_eq!(bv.len(), 32);
     }
 
     #[test]
-    fn test_fit_model() {}
+    fn test_fit_model() -> Result<(), ErrorKind> {
+        //linear_regression()
+        Ok(())
+    }
 
     /*
     We need to do regress(X, Y).L2_regularization(lambda)
@@ -159,14 +162,5 @@ mod tests {
         }
 
         Ok(())
-    }
-
-    #[test]
-    fn test_regression() {
-        // define some test data
-        let data_y = array![0.3, 1.3, 0.7];
-        let data_x = array![[0.1, 0.2], [-0.4, 0.1], [0.2, 0.4]];
-
-        // linear_regression(data_x, data_y)
     }
 }
