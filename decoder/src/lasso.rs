@@ -6,6 +6,7 @@ use ndarray::*;
 use ndarray_linalg::norm::normalize;
 use ndarray_linalg::norm::NormalizeAxis;
 
+#[derive(Debug)]
 pub struct LassoFactory {
     weights: Array1<f64>,
 }
@@ -310,8 +311,8 @@ mod tests {
         assert!(
             delta_sum < 2.,
             format!(
-                "Too different from real predication {}, getting \n{}\nexpected \n{}\n",
-                delta_sum, my_predication, sklearn_predication
+                "Too different from real predication {}, getting \n{}\nexpected \n{}\n with {:?}",
+                delta_sum, my_predication, sklearn_predication, undertest
             )
         );
     }

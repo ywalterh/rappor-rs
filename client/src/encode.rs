@@ -5,12 +5,20 @@ use rand::Rng;
 pub struct Factory {
     k: usize,
     h: u32,
-    f: f32,
+    f: f64,
+    p: f64,
+    q: f64,
 }
 
 impl Factory {
     pub fn new(h: u32) -> Self {
-        Factory { k: 32, h, f: 0.2 }
+        Factory {
+            k: 32,
+            h,
+            f: 0.2,
+            p: 0.6,
+            q: 0.4,
+        }
     }
 
     pub fn initialize_bloom_to_bitarray(&self, value: String) -> BloomFilter {
@@ -30,8 +38,8 @@ impl Factory {
         let m = 200;
 
         let mut perm_randomized = Vec::<bool>::new();
-        let k = (m as f32 * 0.5 * self.f) as u8;
-        let l = (m as f32 * 1.0 * self.f) as u8;
+        let k = (m as f64 * 0.5 * self.f) as u8;
+        let l = (m as f64 * 1.0 * self.f) as u8;
         for b in bi {
             let random_number = rng.gen_range(0, m);
             if random_number <= k {
@@ -45,11 +53,21 @@ impl Factory {
 
         // instant randomized response
         let mut instant_randomized = String::new();
+        let q_k = (m as f64 * self.q) as u8;
         for b in perm_randomized {
+            let random_number = rng.gen_range(0, m);
             if b {
-                instant_randomized.push('1');
+                if random_number <= q_k {
+                    instant_randomized.push('1');
+                } else {
+                    instant_randomized.push('0');
+                }
             } else {
-                instant_randomized.push('0');
+                if random_number > q_k {
+                    instant_randomized.push('1');
+                } else {
+                    instant_randomized.push('0');
+                }
             }
         }
 
