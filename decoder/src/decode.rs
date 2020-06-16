@@ -2,6 +2,7 @@ use super::lasso;
 use bit_vec::BitVec;
 use client::encode;
 use ndarray::*;
+use std::io::{Error, ErrorKind};
 
 fn to_a1(bv: &BitVec) -> Array1<f64> {
     Array1::from(
@@ -16,34 +17,35 @@ fn to_a1(bv: &BitVec) -> Array1<f64> {
 // producce a fit result Y of X
 // TODO fix to use lasso here, or at least something similar
 // select candidate strings corresponding to non-zero coefficients.
-fn linear_regression() -> Result<(), ErrorKind> {
+fn linear_regression() -> Result<lasso::LassoFactory, ErrorKind> {
     let encode_factory = encode::Factory::new(1);
     let encoded = encode_factory.process("a".into());
+
     let bv = string_to_bitvec(encoded);
     let y = estimate_y(&bv);
 
     // train the model of desigm matrix
     // the default bahavior of this is five candidate strings
     let matrix = create_design_matrix();
-    let mut lasso_factory = lasso::LassoFactory::new(32);
+    let mut lasso_factory = lasso::LassoFactory::new(5);
     lasso_factory.train(matrix, &y[0]);
-    Ok(())
+    Ok(lasso_factory)
 }
 
 fn create_design_matrix() -> Array2<f64> {
     let candidate_strings = ["a", "b", "c", "d", "e"];
     // what's 32?
-    let mut design_matrix = Array2::<f64>::zeros((5, 32));
+    let mut design_matrix = Array2::<f64>::zeros((32, 5));
 
     for i in 0..candidate_strings.len() {
         let encode_factory = encode::Factory::new(1);
         let bf = encode_factory.initialize_bloom_to_bitarray(candidate_strings[i].into());
-        let mut row = design_matrix.row_mut(i);
-        for j in 0..row.len() {
-            if bf.bits[i] {
-                row[j] = 1.;
+        let mut col = design_matrix.column_mut(i);
+        for j in 0..col.len() {
+            if bf.bits[j] {
+                col[j] = 1.;
             } else {
-                row[j] = 0.;
+                col[j] = 0.;
             }
         }
     }
@@ -58,9 +60,9 @@ fn create_design_matrix() -> Array2<f64> {
 //Let Y be a vector of tij s, i  [1, k], j  [1, m].
 fn estimate_y(bv: &BitVec) -> Vec<Array1<f64>> {
     let k = bv.len(); // size of filter let h = 1.; // number of hash functions
-    let f = 0.5; // permanent response randomizer
-    let p = 0.5; // temporary response randomizer
-    let q = 0.5; // temporary response randomizer
+    let f = 0.2; // permanent response randomizer
+    let p = 0.6; // temporary response randomizer
+    let q = 0.4; // temporary response randomizer
     let m = 1.; // number of cohorts (groups of hash functions used by clients)
 
     // Cohorts implement different sets of h hash functions for their Bloom filters, thereby
@@ -98,7 +100,7 @@ fn string_to_bitvec(s: String) -> BitVec {
     // I think I'm sending ones and zeros. let's see
     let mut bv: BitVec = BitVec::new();
     for c in s.chars() {
-        bv.push(c == '0');
+        bv.push(c != '0');
     }
     bv
 }
@@ -114,7 +116,20 @@ mod tests {
 
     #[test]
     fn test_create_matrix() {
-        create_design_matrix();
+        let matrix = create_design_matrix();
+        assert_eq!(matrix.len(), 32 * 5);
+        // make sure there's at least some non-negative stuff..
+        let mut all_zero = true;
+        for row in matrix.genrows() {
+            for i in 0..row.len() {
+                if row[i] != 0. {
+                    all_zero = false;
+                    break;
+                }
+            }
+        }
+
+        assert!(!all_zero)
     }
 
     #[test]
@@ -129,8 +144,10 @@ mod tests {
 
     #[test]
     fn test_fit_model() -> Result<(), ErrorKind> {
-        //linear_regression()
+        let factory = linear_regression()?;
+        //println!("{:?}", factory);
         Ok(())
+        //Err(ErrorKind::Other)
     }
 
     /*
@@ -138,7 +155,7 @@ mod tests {
     Where X and Y are data, lambda is a hyperparameter (the default in Numpy/scikit is 1 so start with that maybe)
     */
     #[test]
-    fn test() -> Result<(), ErrorKind> {
+    fn test_estimate_y() -> Result<(), ErrorKind> {
         // let's say we have five candidate strings
         // and we received cohort from a particular report
 
@@ -161,6 +178,8 @@ mod tests {
             }
         }
 
+        let nan = f64::NAN;
+        assert!(y[0].sum() != nan);
         Ok(())
     }
 }
