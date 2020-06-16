@@ -2,7 +2,7 @@ use super::lasso;
 use bit_vec::BitVec;
 use client::encode;
 use ndarray::*;
-use std::io::{Error, ErrorKind};
+use std::io::ErrorKind;
 
 fn to_a1(bv: &BitVec) -> Array1<f64> {
     Array1::from(
