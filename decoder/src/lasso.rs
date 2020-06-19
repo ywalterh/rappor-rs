@@ -8,7 +8,7 @@ use ndarray_linalg::norm::NormalizeAxis;
 
 #[derive(Debug)]
 pub struct LassoFactory {
-    weights: Array1<f64>,
+    pub weights: Array1<f64>,
 }
 
 fn get_initial_weights(nums: usize) -> Array1<f64> {
