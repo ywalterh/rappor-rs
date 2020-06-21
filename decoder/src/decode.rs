@@ -2,7 +2,7 @@ use super::lasso;
 use bit_vec::BitVec;
 use client::encode;
 use ndarray::*;
-use std::io::{Error, ErrorKind};
+use std::io::ErrorKind;
 
 fn to_a1(bv: &BitVec) -> Array1<f64> {
     Array1::from(
@@ -17,7 +17,7 @@ fn to_a1(bv: &BitVec) -> Array1<f64> {
 // producce a fit result Y of X
 // TODO fix to use lasso here, or at least something similar
 // select candidate strings corresponding to non-zero coefficients.
-fn linear_regression() -> Result<lasso::LassoFactory, ErrorKind> {
+fn linear_regression() -> Result<Vec<usize>, ErrorKind> {
     let encode_factory = encode::Factory::new(1);
     let encoded = encode_factory.process("a".into());
 
@@ -29,7 +29,21 @@ fn linear_regression() -> Result<lasso::LassoFactory, ErrorKind> {
     let matrix = create_design_matrix();
     let mut lasso_factory = lasso::LassoFactory::new(5);
     lasso_factory.train(matrix, &y[0]);
-    Ok(lasso_factory)
+
+    // pick the strings with non-zero coefficiency
+    // look through weights
+    // we have a,b,c,d,e
+    // return another matrix I believe?
+    // and then what?
+    let mut left_candiate_string_index = Vec::new();
+    println!("{:?}", lasso_factory);
+    for (index, w) in lasso_factory.weights.iter().enumerate() {
+        if *w != 0. {
+            left_candiate_string_index.push(index);
+        }
+    }
+
+    Ok(left_candiate_string_index)
 }
 
 fn create_design_matrix() -> Array2<f64> {
@@ -144,8 +158,8 @@ mod tests {
 
     #[test]
     fn test_fit_model() -> Result<(), ErrorKind> {
-        let factory = linear_regression()?;
-        //println!("{:?}", factory);
+        let new_indexes = linear_regression()?;
+        //println!("{:?}", new_indexes);
         Ok(())
         //Err(ErrorKind::Other)
     }
