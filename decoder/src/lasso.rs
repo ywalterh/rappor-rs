@@ -29,7 +29,7 @@ impl LassoFactory {
 
     // get feature matrix as x, and output as y
     // return weights
-    pub fn train(&mut self, x: Array2<f64>, y: &Array1<f64>) {
+    pub fn train(&mut self, x: &Array2<f64>, y: &Array1<f64>) {
         let l1_penalty = 0.01;
         let tolerance = 0.01;
         let x_normalized = self.normalize_features(x);
@@ -37,8 +37,8 @@ impl LassoFactory {
     }
 
     // this is L2??
-    fn normalize_features(&self, x: Array2<f64>) -> Array2<f64> {
-        let (n, _) = normalize(x, NormalizeAxis::Column);
+    fn normalize_features(&self, x: &Array2<f64>) -> Array2<f64> {
+        let (n, _) = normalize(x.clone(), NormalizeAxis::Column);
         return n;
     }
 
@@ -133,7 +133,7 @@ mod tests {
             }
         }
 
-        x_matrix = undertest.normalize_features(x_matrix);
+        x_matrix = undertest.normalize_features(&x_matrix);
         let feature_matrix = x_matrix.clone();
 
         // randomize Y
@@ -203,7 +203,7 @@ mod tests {
             -0.95312111
         ];
 
-        undertest.train(x_matrix, &outputs);
+        undertest.train(&x_matrix, &outputs);
         // make sure the model (weights) returned is what we got from python or C++
         let real_weights = array![
             30.068216996847337,

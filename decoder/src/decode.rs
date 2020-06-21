@@ -2,13 +2,62 @@ use super::lasso;
 use bit_vec::BitVec;
 use client::encode;
 use ndarray::*;
+use ndarray_linalg::*;
 use std::io::ErrorKind;
 
-pub struct Factory {}
+pub struct Factory {
+    pub encoder: encode::Factory,
+}
 
 impl Factory {
     pub fn new() -> Self {
-        Factory {}
+        Factory {
+            encoder: encode::Factory::new(1),
+        }
+    }
+
+    //Estimate the number of times each bit i within cohort
+    //j, tij , is truly set in B for each cohort. Given the
+    //number of times each bit i in cohort j, cij was set in
+    //a set of Nj reports, the estimate is given by
+    //Let Y be a vector of tij s, i  [1, k], j  [1, m].
+    fn estimate_y(&self, bv: &BitVec) -> Vec<Array1<f64>> {
+        let k = bv.len(); // size of filter let h = 1.; // number of hash functions
+        let f = self.encoder.f;
+        let p = self.encoder.p;
+        let q = self.encoder.q;
+
+        //let m = 1.; // number of cohorts (groups of hash functions used by clients)
+
+        // Cohorts implement different sets of h hash functions for their Bloom filters, thereby
+        // reducing the chance of accidental collisions of two strings
+        // across all of them.
+        // what's the hash function?
+        let cohorts = vec![vec![bv]]; // for now, just one cohort of only one client
+
+        let init = || Array1::<f64>::zeros(k);
+
+        let reported_counts_by_cohort = cohorts
+            .iter()
+            .map(|cohort| {
+                cohort
+                    .iter()
+                    .fold(init(), |acc, curr_bv| acc + to_a1(curr_bv))
+            })
+            .collect::<Vec<Array1<f64>>>(); // TODO need to capture number of reports per cohort here too
+        let n = 1.; // cheating here hard coding to 1 report per cohort
+
+        // this is y, pass it along
+        let estimated_true_counts_by_cohort = reported_counts_by_cohort
+            .iter()
+            .map(|counts| {
+                counts.map(|count| {
+                    (count - (p + 0.5 * f * q - 0.5 * f * p) * n) / ((1. - f) * (q - p))
+                })
+            })
+            .collect::<Vec<Array1<f64>>>();
+
+        estimated_true_counts_by_cohort
     }
 
     // take Y and X then produce a model that fit for step 3
@@ -16,33 +65,44 @@ impl Factory {
     // producce a fit result Y of X
     // TODO fix to use lasso here, or at least something similar
     // select candidate strings corresponding to non-zero coefficients.
-    pub fn linear_regression(&self) -> Result<Vec<usize>, ErrorKind> {
-        let encode_factory = encode::Factory::new(1);
-        let encoded = encode_factory.process("a".into());
+    pub fn lasso_select_string(&self) -> Result<Array2<f64>, ErrorKind> {
+        let encoded = self.encoder.process("a".into());
 
         let bv = string_to_bitvec(encoded);
-        let y = estimate_y(&bv, &encode_factory);
+        let y = self.estimate_y(&bv);
 
         // train the model of desigm matrix
         // the default bahavior of this is five candidate strings
         let matrix = create_design_matrix();
         let mut lasso_factory = lasso::LassoFactory::new(5);
-        lasso_factory.train(matrix, &y[0]);
+        lasso_factory.train(&matrix, &y[0]);
 
         // pick the strings with non-zero coefficiency
         // look through weights
         // we have a,b,c,d,e
         // return another matrix I believe?
-        // and then what?
+        // and then use the selected matrix to run through OLS to select counts of actual hits
         let mut left_candiate_string_index = Vec::new();
-        println!("{:?}", lasso_factory);
         for (index, w) in lasso_factory.weights.iter().enumerate() {
             if *w != 0. {
                 left_candiate_string_index.push(index);
             }
         }
 
-        Ok(left_candiate_string_index)
+        let mut updated_feature_matrix =
+            Array2::<f64>::zeros((*&matrix.shape()[0], left_candiate_string_index.len()));
+
+        // update stream based on non-zero coefficiency
+        let mut index = 0;
+        for mut row in updated_feature_matrix.genrows_mut() {
+            let original_row = matrix.row(index);
+            for j in 0..row.len() {
+                row[j] = original_row[j];
+            }
+            index = index + 1;
+        }
+
+        Ok(updated_feature_matrix)
     }
 }
 
@@ -73,48 +133,6 @@ fn create_design_matrix() -> Array2<f64> {
     }
 
     design_matrix
-}
-
-//Estimate the number of times each bit i within cohort
-//j, tij , is truly set in B for each cohort. Given the
-//number of times each bit i in cohort j, cij was set in
-//a set of Nj reports, the estimate is given by
-//Let Y be a vector of tij s, i  [1, k], j  [1, m].
-fn estimate_y(bv: &BitVec, encoder: &encode::Factory) -> Vec<Array1<f64>> {
-    let k = bv.len(); // size of filter let h = 1.; // number of hash functions
-    let f = encoder.f;
-    let p = encoder.p;
-    let q = encoder.q;
-
-    //let m = 1.; // number of cohorts (groups of hash functions used by clients)
-
-    // Cohorts implement different sets of h hash functions for their Bloom filters, thereby
-    // reducing the chance of accidental collisions of two strings
-    // across all of them.
-    // what's the hash function?
-    let cohorts = vec![vec![bv]]; // for now, just one cohort of only one client
-
-    let init = || Array1::<f64>::zeros(k);
-
-    let reported_counts_by_cohort = cohorts
-        .iter()
-        .map(|cohort| {
-            cohort
-                .iter()
-                .fold(init(), |acc, curr_bv| acc + to_a1(curr_bv))
-        })
-        .collect::<Vec<Array1<f64>>>(); // TODO need to capture number of reports per cohort here too
-    let n = 1.; // cheating here hard coding to 1 report per cohort
-
-    // this is y, pass it along
-    let estimated_true_counts_by_cohort = reported_counts_by_cohort
-        .iter()
-        .map(|counts| {
-            counts.map(|count| (count - (p + 0.5 * f * q - 0.5 * f * p) * n) / ((1. - f) * (q - p)))
-        })
-        .collect::<Vec<Array1<f64>>>();
-
-    estimated_true_counts_by_cohort
 }
 
 // likely something received from the web is
@@ -162,12 +180,10 @@ mod tests {
     }
 
     #[test]
-    fn test_fit_model() -> Result<(), ErrorKind> {
+    fn test_fit_model() -> Result<(), error::LinalgError> {
         let f = Factory::new();
-        let _new_indexes = f.linear_regression()?;
-        //println!("{:?}", new_indexes);
+        let _result = f.lasso_select_string();
         Ok(())
-        //Err(ErrorKind::Other)
     }
 
     /*
@@ -176,12 +192,13 @@ mod tests {
     */
     #[test]
     fn test_estimate_y() -> Result<(), ErrorKind> {
+        let f = Factory::new();
         // let's say we have five candidate strings
         // and we received cohort from a particular report
 
         // test case
         let bv = BitVec::from_bytes(&[0b10100000, 0b00010010]);
-        let y = estimate_y(&bv, &encode::Factory::new(1));
+        let y = f.estimate_y(&bv);
 
         // create design matrix X of size km X M where M is the number of candidate strings
         // the matrix is 1 if bloom filter bits for each string for each cohort
