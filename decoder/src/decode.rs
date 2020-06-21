@@ -2,7 +2,6 @@ use super::lasso;
 use bit_vec::BitVec;
 use client::encode;
 use ndarray::*;
-use ndarray_linalg::*;
 use std::io::ErrorKind;
 
 pub struct Factory {
@@ -180,7 +179,7 @@ mod tests {
     }
 
     #[test]
-    fn test_fit_model() -> Result<(), error::LinalgError> {
+    fn test_fit_model() -> Result<(), ErrorKind> {
         let f = Factory::new();
         let _result = f.lasso_select_string();
         Ok(())
