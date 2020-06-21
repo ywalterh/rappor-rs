@@ -4,46 +4,54 @@ use client::encode;
 use ndarray::*;
 use std::io::ErrorKind;
 
+pub struct Factory {}
+
+impl Factory {
+    pub fn new() -> Self {
+        Factory {}
+    }
+
+    // take Y and X then produce a model that fit for step 3
+    // take ndarray
+    // producce a fit result Y of X
+    // TODO fix to use lasso here, or at least something similar
+    // select candidate strings corresponding to non-zero coefficients.
+    pub fn linear_regression(&self) -> Result<Vec<usize>, ErrorKind> {
+        let encode_factory = encode::Factory::new(1);
+        let encoded = encode_factory.process("a".into());
+
+        let bv = string_to_bitvec(encoded);
+        let y = estimate_y(&bv, &encode_factory);
+
+        // train the model of desigm matrix
+        // the default bahavior of this is five candidate strings
+        let matrix = create_design_matrix();
+        let mut lasso_factory = lasso::LassoFactory::new(5);
+        lasso_factory.train(matrix, &y[0]);
+
+        // pick the strings with non-zero coefficiency
+        // look through weights
+        // we have a,b,c,d,e
+        // return another matrix I believe?
+        // and then what?
+        let mut left_candiate_string_index = Vec::new();
+        println!("{:?}", lasso_factory);
+        for (index, w) in lasso_factory.weights.iter().enumerate() {
+            if *w != 0. {
+                left_candiate_string_index.push(index);
+            }
+        }
+
+        Ok(left_candiate_string_index)
+    }
+}
+
 fn to_a1(bv: &BitVec) -> Array1<f64> {
     Array1::from(
         bv.iter()
             .map(|bit| if bit { 1. } else { 0. })
             .collect::<Vec<f64>>(),
     )
-}
-
-// take Y and X then produce a model that fit for step 3
-// take ndarray
-// producce a fit result Y of X
-// TODO fix to use lasso here, or at least something similar
-// select candidate strings corresponding to non-zero coefficients.
-fn linear_regression() -> Result<Vec<usize>, ErrorKind> {
-    let encode_factory = encode::Factory::new(1);
-    let encoded = encode_factory.process("a".into());
-
-    let bv = string_to_bitvec(encoded);
-    let y = estimate_y(&bv);
-
-    // train the model of desigm matrix
-    // the default bahavior of this is five candidate strings
-    let matrix = create_design_matrix();
-    let mut lasso_factory = lasso::LassoFactory::new(5);
-    lasso_factory.train(matrix, &y[0]);
-
-    // pick the strings with non-zero coefficiency
-    // look through weights
-    // we have a,b,c,d,e
-    // return another matrix I believe?
-    // and then what?
-    let mut left_candiate_string_index = Vec::new();
-    println!("{:?}", lasso_factory);
-    for (index, w) in lasso_factory.weights.iter().enumerate() {
-        if *w != 0. {
-            left_candiate_string_index.push(index);
-        }
-    }
-
-    Ok(left_candiate_string_index)
 }
 
 fn create_design_matrix() -> Array2<f64> {
@@ -72,12 +80,13 @@ fn create_design_matrix() -> Array2<f64> {
 //number of times each bit i in cohort j, cij was set in
 //a set of Nj reports, the estimate is given by
 //Let Y be a vector of tij s, i  [1, k], j  [1, m].
-fn estimate_y(bv: &BitVec) -> Vec<Array1<f64>> {
+fn estimate_y(bv: &BitVec, encoder: &encode::Factory) -> Vec<Array1<f64>> {
     let k = bv.len(); // size of filter let h = 1.; // number of hash functions
-    let f = 0.2; // permanent response randomizer
-    let p = 0.6; // temporary response randomizer
-    let q = 0.4; // temporary response randomizer
-    let m = 1.; // number of cohorts (groups of hash functions used by clients)
+    let f = encoder.f;
+    let p = encoder.p;
+    let q = encoder.q;
+
+    //let m = 1.; // number of cohorts (groups of hash functions used by clients)
 
     // Cohorts implement different sets of h hash functions for their Bloom filters, thereby
     // reducing the chance of accidental collisions of two strings
@@ -116,13 +125,9 @@ fn string_to_bitvec(s: String) -> BitVec {
     for c in s.chars() {
         bv.push(c != '0');
     }
+
     bv
 }
-
-// Fit a regular least-squares regression using the selected
-// variables to estimate counts, their standard errors and
-// p-values.
-fn least_square_regression() {}
 
 #[cfg(test)]
 mod tests {
@@ -158,7 +163,8 @@ mod tests {
 
     #[test]
     fn test_fit_model() -> Result<(), ErrorKind> {
-        let new_indexes = linear_regression()?;
+        let f = Factory::new();
+        let _new_indexes = f.linear_regression()?;
         //println!("{:?}", new_indexes);
         Ok(())
         //Err(ErrorKind::Other)
@@ -175,7 +181,7 @@ mod tests {
 
         // test case
         let bv = BitVec::from_bytes(&[0b10100000, 0b00010010]);
-        let y = estimate_y(&bv);
+        let y = estimate_y(&bv, &encode::Factory::new(1));
 
         // create design matrix X of size km X M where M is the number of candidate strings
         // the matrix is 1 if bloom filter bits for each string for each cohort

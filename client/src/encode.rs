@@ -5,9 +5,9 @@ use rand::Rng;
 pub struct Factory {
     k: usize,
     h: u32,
-    f: f64,
-    p: f64,
-    q: f64,
+    pub f: f64,
+    pub p: f64,
+    pub q: f64,
 }
 
 impl Factory {
@@ -15,9 +15,9 @@ impl Factory {
         Factory {
             k: 32,
             h,
-            f: 0.2,
-            p: 0.6,
-            q: 0.4,
+            f: 0.5,
+            p: 0.5,
+            q: 0.75,
         }
     }
 
@@ -54,6 +54,7 @@ impl Factory {
         // instant randomized response
         let mut instant_randomized = String::new();
         let q_k = (m as f64 * self.q) as u8;
+        let p_k = (m as f64 * self.p) as u8;
         for b in perm_randomized {
             let random_number = rng.gen_range(0, m);
             if b {
@@ -63,7 +64,7 @@ impl Factory {
                     instant_randomized.push('0');
                 }
             } else {
-                if random_number > q_k {
+                if random_number <= p_k {
                     instant_randomized.push('1');
                 } else {
                     instant_randomized.push('0');
