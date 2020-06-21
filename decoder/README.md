@@ -1,5 +1,5 @@
-# fuzzy-men (Server)
-Rocket server, with decoder
+# fuzzy-men (decoder)
+Fuzzy-men decoder
 
 ## Build instruction
 Prepare system
@@ -14,3 +14,7 @@ Docker build
 
 ## References
 https://static.googleusercontent.com/media/research.google.com/en//pubs/archive/42852.pdf
+
+## Todo
+[ ] add reference test from ols.py
+[ ] implement a CDF and then caclualte p value in OLS
