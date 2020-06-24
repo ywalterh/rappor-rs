@@ -13,5 +13,6 @@ ndarray = "0.13"
 ndarray-linalg = { git = "https://github.com/rust-ndarray/ndarray-linalg", features = ["openblas"]}
 ndarray-rand = "0.11.0"
 openblas-src = "0.9"
+statrs = "0.12.0"
 
 client = { path = "../client" }
