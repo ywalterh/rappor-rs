@@ -1,7 +1,9 @@
 use super::lasso;
+use super::linear;
 use bit_vec::BitVec;
 use client::encode;
 use ndarray::*;
+use ndarray_linalg::*;
 use std::io::ErrorKind;
 
 pub struct Factory {
@@ -48,8 +50,7 @@ impl Factory {
 
         // this is y, pass it along
         let estimated_true_counts_by_cohort = reported_counts_by_cohort
-            .iter()
-            .map(|counts| {
+            .iter() .map(|counts| {
                 counts.map(|count| {
                     (count - (p + 0.5 * f * q - 0.5 * f * p) * n) / ((1. - f) * (q - p))
                 })
@@ -64,17 +65,13 @@ impl Factory {
     // producce a fit result Y of X
     // TODO fix to use lasso here, or at least something similar
     // select candidate strings corresponding to non-zero coefficients.
-    pub fn lasso_select_string(&self) -> Result<Array2<f64>, ErrorKind> {
-        let encoded = self.encoder.process("a".into());
-
-        let bv = string_to_bitvec(encoded);
-        let y = self.estimate_y(&bv);
+    pub fn lasso_select_string(&self, y : &Array1<f64>) -> Result<Array2<f64>, ErrorKind> { 
 
         // train the model of desigm matrix
         // the default bahavior of this is five candidate strings
         let matrix = create_design_matrix();
         let mut lasso_factory = lasso::LassoFactory::new(5);
-        lasso_factory.train(&matrix, &y[0]);
+        lasso_factory.train(&matrix, y);
 
         // pick the strings with non-zero coefficiency
         // look through weights
@@ -179,9 +176,19 @@ mod tests {
     }
 
     #[test]
-    fn test_fit_model() -> Result<(), ErrorKind> {
+    fn test_fit_model() -> Result<(), error::LinalgError> {
         let f = Factory::new();
-        let _result = f.lasso_select_string();
+        let encoded = f.encoder.process("a".into());
+        let bv = string_to_bitvec(encoded);
+        let y = f.estimate_y(&bv);
+
+        let result = f.lasso_select_string(&y[0]).unwrap();
+        // then run this against ols again
+        let mut ols_factory = linear::Factory::new(); 
+        ols_factory.ols(&result, &y[0])?;
+        // print out coef and coef_p
+        println!("{}", ols_factory.coefficients);
+        println!("{}", ols_factory.coef_p);
         Ok(())
     }
 

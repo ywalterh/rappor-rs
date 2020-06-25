@@ -3,13 +3,11 @@ extern crate ndarray_linalg;
 
 use ndarray::*;
 use ndarray_linalg::*;
-use ndarray_rand::*;
-use rand::distributions::Uniform;
 use statrs::distribution::{StudentsT, Univariate};
 
 #[derive(Debug, Default)]
 pub struct Factory {
-    coefficients: Array1<f64>,
+    pub coefficients: Array1<f64>,
     num_of_observations: usize,
     num_of_coefficient: usize,
 
@@ -19,7 +17,7 @@ pub struct Factory {
     sse: f64,
     coef_standard_errors: Array1<f64>,
     coef_t: Array1<f64>,
-    coef_p: Array1<f64>,
+    pub coef_p: Array1<f64>,
 
     residuals: Array1<f64>,
 }
@@ -30,7 +28,7 @@ impl Factory {
     }
 
     // let's not deal with labels
-    // we only take x as 2D array, and y as 1D array
+    // we only take xk'jas 2D array, and y as 1D array
     pub fn ols(&mut self, x: &Array2<f64>, y: &Array1<f64>) -> Result<(), error::LinalgError> {
         let inv_xx = (x.t().dot(x)).inv()?;
         let xy = x.t().dot(y);
@@ -44,7 +42,6 @@ impl Factory {
         self.sse = self.residuals.dot(&self.residuals) / self.degrees_of_freedom_error as f64;
         // into_diag only works for 1D array
         self.coef_standard_errors = (self.sse * &inv_xx).into_diag().mapv(f64::sqrt);
-        println!("coef_se is {}", self.coef_standard_errors);
         self.coef_t = &self.coefficients / &self.coef_standard_errors;
         self.coef_p =
             (1. - self.cdf(
@@ -55,9 +52,8 @@ impl Factory {
     }
 
     // make cdf works on an array so that we can calculate p-value for all the cofficients
-    pub fn cdf(&self, distribution: &Array1<f64>, df: f64) -> Array1<f64> {
+    fn cdf(&self, distribution: &Array1<f64>, df: f64) -> Array1<f64> {
         distribution.mapv(|x| {
-            println!("x is {}, df is {}", x, df);
             let n = StudentsT::new(x, 1., df).unwrap();
             n.cdf(1.)
         })
@@ -67,8 +63,8 @@ impl Factory {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ndarray::*;
-    use ndarray_linalg::*;
+    use ndarray_rand::*;
+    use rand::distributions::Uniform;
 
     #[test]
     fn test_cdf() {
@@ -93,7 +89,6 @@ mod tests {
 
         let f = Factory::new();
         let result = f.cdf(&real_weights.mapv(f64::abs), 2.);
-        println!("{:?}", result);
     }
 
     #[test]
