@@ -185,10 +185,10 @@ mod tests {
         let result = f.lasso_select_string(&y[0]).unwrap();
         // then run this against ols again
         let mut ols_factory = linear::Factory::new(); 
+        println!("{}", &result);
+        println!("{}", &y[0]);
         ols_factory.ols(&result, &y[0])?;
         // print out coef and coef_p
-        println!("{}", ols_factory.coefficients);
-        println!("{}", ols_factory.coef_p);
         Ok(())
     }
 
