@@ -54,8 +54,8 @@ impl Factory {
     // make cdf works on an array so that we can calculate p-value for all the cofficients
     fn cdf(&self, distribution: &Array1<f64>, df: f64) -> Array1<f64> {
         distribution.mapv(|x| {
-            let n = StudentsT::new(x, 1., df).unwrap();
-            n.cdf(1.)
+            let n = StudentsT::new(0., 1., df).unwrap();
+            n.cdf(x)
         })
     }
 }
@@ -89,6 +89,7 @@ mod tests {
 
         let f = Factory::new();
         let result = f.cdf(&real_weights.mapv(f64::abs), 2.);
+        println!("{}", result);
     }
 
     #[test]
@@ -132,45 +133,12 @@ mod tests {
     }
 
     #[test]
-    // need to fix this bug
-    fn test_ols_lapack_error() -> Result<(), error::LinalgError> {
+    fn test_ols_python_test_case() -> Result<(), error::LinalgError> {
+        let x = Array::random((100, 4), Uniform::new(0., 0.15));
+        let y = Array::random(100, Uniform::new(0., 0.15));
 
-        let x = array![[0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0],
-        [1, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0],
-        [0, 0, 0, 1, 0],
-        [0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0],
-        [0, 0, 1, 0, 1],
-        [0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0],
-        [0, 1, 0, 0, 0],
-        [0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0]];
-
-        let y = array![3.5, 3.5, -4.5, 3.5, -4.5, 3.5, -4.5, -4.5, -4.5, 3.5, -4.5, -4.5, 3.5, 3.5, 3.5, 3.5, -4.5, 3.5, -4.5, 3.5, 3.5, -4.5, 3.5, -4.5, -4.5, -4.5, 3.5, -4.5, -4.5, 3.5, -4.5, 3.5];
         let mut f = Factory::new();
-        f.ols(&x.map(|num| {*num as f64}), &y)?;
+        f.ols(&x, &y)?;
         Ok(())
     }
 }
