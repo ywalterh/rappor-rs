@@ -107,7 +107,23 @@ impl LassoFactory {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use ndarray_rand::rand_distr::Uniform;
+    use ndarray_rand::*;
     use std::f64::consts::PI;
+
+    #[test]
+    fn test_lasso_real() {
+        let X = Array2::random((100, 5), Uniform::new(0., 1.));
+        let weights = array![0., 2., 0., -3., 0.];
+        let noise = Array1::random(100, Uniform::new(0., 0.1));
+        let y = X.dot(&weights) + &noise;
+
+        let mut undertest = LassoFactory::new(5);
+        undertest.train(&X, &y);
+
+        println!("real weights : {}", weights);
+        println!("predicted weights : {}", undertest.weights);
+    }
 
     #[test]
     fn test_lasso() {

@@ -3,7 +3,7 @@ use rand::Rng;
 
 // This contains the client implementation of RAPPOR
 pub struct Factory {
-    k: usize,
+    pub k: usize,
     h: u32,
     pub f: f64,
     pub p: f64,
@@ -83,7 +83,7 @@ mod tests {
     #[test]
     fn it_works() {
         let f = Factory::new(1);
-        let result = f.process("test".into());
+        let result = f.process("68".into());
         assert_ne!(result, "");
         println!("{}", result);
         assert_eq!(result.len(), 32);
