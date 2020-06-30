@@ -3,7 +3,6 @@ use super::linear;
 use bit_vec::BitVec;
 use client::encode;
 use ndarray::*;
-use ndarray_linalg::*;
 use std::io::ErrorKind;
 
 pub struct Factory {
@@ -17,12 +16,35 @@ impl Factory {
         }
     }
 
+    pub fn fit_model(&self, result: &Array2<f64>, y_vector: &Array1<f64>) {
+        let mut ols_factory = linear::Factory::new();
+        let result = ols_factory.ols(result, y_vector);
+        match result {
+            Ok(()) => {
+                println!("coef is {}", ols_factory.coefficients);
+                println!("coef_p is {}", ols_factory.coef_p);
+
+                // compare to Bonferroni correction of 0.05/M
+                // in this case, there are 5 candidate strings, so 0.01 is the correction level
+                // less 0.01
+                for (i, p) in ols_factory.coef_p.iter().enumerate() {
+                    if *p < 0.01 {
+                        println!("Found one signifant i {}", i)
+                    }
+                }
+            }
+            Err(err) => {
+                println!("skip due to error {}", err);
+            }
+        }
+    }
+
     //Estimate the number of times each bit i within cohort
     //j, tij , is truly set in B for each cohort. Given the
     //number of times each bit i in cohort j, cij was set in
     //a set of Nj reports, the estimate is given by
     //Let Y be a vector of tij s, i  [1, k], j  [1, m].
-    fn estimate_y(&self, bv: Vec<BitVec>) -> Vec<Array1<f64>> {
+    pub fn estimate_y(&self, bv: Vec<BitVec>) -> Vec<Array1<f64>> {
         let k = self.encoder.k; // size of filter let h = 1.; // number of hash functions
         let f = self.encoder.f;
         let p = self.encoder.p;
@@ -132,21 +154,22 @@ fn to_a1(bv: &BitVec) -> Array1<f64> {
     )
 }
 
-// likely something received from the web is
-// a string, need to convert it to bitvec
-fn string_to_bitvec(s: String) -> BitVec {
-    // I think I'm sending ones and zeros. let's see
-    let mut bv: BitVec = BitVec::new();
-    for c in s.chars() {
-        bv.push(c != '0');
-    }
-
-    bv
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
+    use ndarray_linalg::*;
+
+    // likely something received from the web is
+    // a string, need to convert it to bitvec
+    fn string_to_bitvec(s: String) -> BitVec {
+        // I think I'm sending ones and zeros. let's see
+        let mut bv: BitVec = BitVec::new();
+        for c in s.chars() {
+            bv.push(c != '0');
+        }
+
+        bv
+    }
 
     #[test]
     fn test_create_matrix() {
@@ -221,7 +244,7 @@ mod tests {
                     }
                 }
                 Err(err) => {
-                    //println!("skip due to error");
+                    println!("skip due to error {}", err);
                 }
             }
         }
