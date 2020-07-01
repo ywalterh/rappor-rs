@@ -44,21 +44,17 @@ impl Factory {
     //number of times each bit i in cohort j, cij was set in
     //a set of Nj reports, the estimate is given by
     //Let Y be a vector of tij s, i  [1, k], j  [1, m].
-    pub fn estimate_y(&self, bv: Vec<BitVec>) -> Vec<Array1<f64>> {
+    pub fn estimate_y(&self, cohorts: Vec<Vec<BitVec>>) -> Vec<Array1<f64>> {
         let k = self.encoder.k; // size of filter let h = 1.; // number of hash functions
         let f = self.encoder.f;
         let p = self.encoder.p;
         let q = self.encoder.q;
-        let n = (&bv).len() as f64; // cheating here hard coding to 1 report per cohort
 
-        //let m = 1.; // number of cohorts (groups of hash functions used by clients)
-
+        // let m = cohorts.len();
         // Cohorts implement different sets of h hash functions for their Bloom filters, thereby
         // reducing the chance of accidental collisions of two strings
         // across all of them.
         // what's the hash function?
-        let cohorts = vec![bv]; // for now, just one cohort of only one client
-
         let init = || Array1::<f64>::zeros(k);
 
         let reported_counts_by_cohort = cohorts
@@ -68,12 +64,16 @@ impl Factory {
                     .iter()
                     .fold(init(), |acc, curr_bv| acc + to_a1(curr_bv))
             })
-            .collect::<Vec<Array1<f64>>>(); // TODO need to capture number of reports per cohort here too
+            .collect::<Vec<Array1<f64>>>();
 
+        // TODO need to capture number of reports per cohort here too
+        // now we have more cohorts, need to update this
+        //let n = (&bv).len() as f64; // cheating here hard coding to 1 report per cohort
         // this is y, pass it along
         let estimated_true_counts_by_cohort = reported_counts_by_cohort
             .iter()
             .map(|counts| {
+                let n = counts.len() as f64;
                 counts.map(|count| {
                     (count - (p + 0.5 * f * q - 0.5 * f * p) * n) / ((1. - f) * (q - p))
                 })
@@ -158,6 +158,7 @@ fn to_a1(bv: &BitVec) -> Array1<f64> {
 mod tests {
     use super::*;
     use ndarray_linalg::*;
+    use std::error::Error;
 
     // likely something received from the web is
     // a string, need to convert it to bitvec
@@ -219,7 +220,7 @@ mod tests {
                 bvs.push(string_to_bitvec(encoded));
             }
 
-            let y = f.estimate_y(bvs);
+            let y = f.estimate_y(vec![bvs]);
             let y_vector = &y[0];
             let result = f.lasso_select_string(y_vector).unwrap();
             // then run this against ols again
@@ -263,7 +264,7 @@ mod tests {
 
         // test case
         let bv = BitVec::from_bytes(&[0b10100000, 0b00010010, 0b00010010, 0b00010010]);
-        let y = f.estimate_y(vec![bv]);
+        let y = f.estimate_y(vec![vec![bv]]);
 
         // another bv of the same
         let bv = BitVec::from_bytes(&[0b10100000, 0b00010010, 0b00010010, 0b00010010]);
@@ -285,6 +286,67 @@ mod tests {
 
         let nan = f64::NAN;
         assert!(y[0].sum() != nan);
+        Ok(())
+    }
+
+    #[test]
+    fn test_regression() -> Result<(), Box<dyn Error>> {
+        let f = Factory::new();
+        let mut rdr = csv::Reader::from_path("tests/test-cases.csv")?;
+
+        let mut cur_cohort = 0;
+        let mut cohorts = Vec::new();
+
+        let mut count = 0;
+
+        for result in rdr.records() {
+            // The iterator yields Result<StringRecord, Error>, so we check the
+            // error here.
+            let record = result?;
+
+            process_string_record(&f.encoder, record, &mut cur_cohort, &mut cohorts)?;
+
+            if count == 10000 {
+                break;
+            }
+            count = count + 1;
+        }
+
+        println!("size of cohorts is {}", cohorts.len());
+
+        Ok(())
+    }
+
+    // this part is doing a lot of stupid things now, potentially very
+    // slow
+    // this should return not just bitvec but also group them into different cohort
+    fn process_string_record(
+        encoder: &encode::Factory,
+        record: csv::StringRecord,
+        cur_cohort: &mut usize,
+        cohorts: &mut Vec<Vec<BitVec>>,
+    ) -> Result<(), Box<dyn Error>> {
+        assert!(record.len() == 3);
+
+        let cohort = record.get(1).unwrap().parse::<usize>().unwrap();
+        let same_cohort = *cur_cohort == cohort;
+
+        // This is an intentional unwrap
+        let encoded_bv = string_to_bitvec(encoder.process(record.get(2).unwrap().into()));
+        if same_cohort {
+            match cohorts.get_mut(*cur_cohort) {
+                Some(vec) => vec.push(encoded_bv),
+                None => {
+                    let bv_vec = vec![encoded_bv];
+                    cohorts.push(bv_vec)
+                }
+            }
+        } else {
+            let bv_vec = vec![encoded_bv];
+            cohorts.push(bv_vec);
+            *cur_cohort = cohort;
+        }
+
         Ok(())
     }
 }
