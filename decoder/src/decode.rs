@@ -262,11 +262,12 @@ mod tests {
         // and we received cohort from a particular report
 
         // test case
-        let bv = BitVec::from_bytes(&[0b10100000, 0b00010010]);
+        let bv = BitVec::from_bytes(&[0b10100000, 0b00010010, 0b00010010, 0b00010010]);
         let y = f.estimate_y(vec![bv]);
 
         // another bv of the same
-        let bv = BitVec::from_bytes(&[0b10100000, 0b00010010]);
+        let bv = BitVec::from_bytes(&[0b10100000, 0b00010010, 0b00010010, 0b00010010]);
+
         // create design matrix X of size km X M where M is the number of candidate strings
         // the matrix is 1 if bloom filter bits for each string for each cohort
         // in our case, we probably have k = 1, because we are lazy and only one cohort
