@@ -158,6 +158,7 @@ fn to_a1(bv: &BitVec) -> Array1<f64> {
 mod tests {
     use super::*;
     use ndarray_linalg::*;
+    use rayon::prelude::*;
     use std::error::Error;
 
     // likely something received from the web is
@@ -289,31 +290,43 @@ mod tests {
         Ok(())
     }
 
+    use std::collections::HashMap;
+    use std::sync::mpsc::channel;
+
     #[test]
     fn test_regression() -> Result<(), Box<dyn Error>> {
         let f = Factory::new();
         let mut rdr = csv::Reader::from_path("tests/test-cases.csv")?;
 
-        let mut cur_cohort = 0;
-        let mut cohorts = Vec::new();
-
-        let mut count = 0;
-
+        let mut data_map = HashMap::<usize, Vec<String>>::new();
+        // load in memory first and then. it's only 13M data
+        // partitioning data here
         for result in rdr.records() {
             // The iterator yields Result<StringRecord, Error>, so we check the
             // error here.
-            let record = result?;
-
-            process_string_record(&f.encoder, record, &mut cur_cohort, &mut cohorts)?;
-
-            if count == 10000 {
-                break;
-            }
-            count = count + 1;
+            let r = result?;
+            let cohort_id = r.get(1).unwrap().parse::<usize>().unwrap();
+            let cohort_vec = data_map.entry(cohort_id).or_insert(Vec::new());
+            cohort_vec.push(r.get(2).unwrap().into());
         }
 
-        println!("size of cohorts is {}", cohorts.len());
+        let mut cohorts = Vec::<Vec<BitVec>>::new();
 
+        let (sender, receiver) = channel();
+        // it's a lot easier to dive in parallel in cohorts
+        // process in parallel
+        data_map.par_iter().for_each(|(_, v)| {
+            v.par_iter().for_each(|reported_string| {
+                sender
+                    .send(process_string_record(&f.encoder, reported_string).unwrap())
+                    .unwrap();
+            });
+
+            let mut bvs = Vec::new();
+            cohorts.push(bvs);
+        });
+
+        println!("size of cohorts is {}", cohorts.len());
         Ok(())
     }
 
@@ -322,31 +335,9 @@ mod tests {
     // this should return not just bitvec but also group them into different cohort
     fn process_string_record(
         encoder: &encode::Factory,
-        record: csv::StringRecord,
-        cur_cohort: &mut usize,
-        cohorts: &mut Vec<Vec<BitVec>>,
-    ) -> Result<(), Box<dyn Error>> {
-        assert!(record.len() == 3);
-
-        let cohort = record.get(1).unwrap().parse::<usize>().unwrap();
-        let same_cohort = *cur_cohort == cohort;
-
+        record: &String,
+    ) -> Result<BitVec, Box<dyn Error>> {
         // This is an intentional unwrap
-        let encoded_bv = string_to_bitvec(encoder.process(record.get(2).unwrap().into()));
-        if same_cohort {
-            match cohorts.get_mut(*cur_cohort) {
-                Some(vec) => vec.push(encoded_bv),
-                None => {
-                    let bv_vec = vec![encoded_bv];
-                    cohorts.push(bv_vec)
-                }
-            }
-        } else {
-            let bv_vec = vec![encoded_bv];
-            cohorts.push(bv_vec);
-            *cur_cohort = cohort;
-        }
-
-        Ok(())
+        Ok(string_to_bitvec(encoder.process(record.clone())))
     }
 }
