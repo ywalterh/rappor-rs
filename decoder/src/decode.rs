@@ -310,34 +310,24 @@ mod tests {
             cohort_vec.push(r.get(2).unwrap().into());
         }
 
-        let mut cohorts = Vec::<Vec<BitVec>>::new();
-
         let (sender, receiver) = channel();
+        // clone sender everytime we need something returned
         // it's a lot easier to dive in parallel in cohorts
         // process in parallel
-        data_map.par_iter().for_each(|(_, v)| {
-            v.par_iter().for_each(|reported_string| {
-                sender
-                    .send(process_string_record(&f.encoder, reported_string).unwrap())
-                    .unwrap();
+        data_map
+            .par_iter()
+            .for_each_with(sender, |sender_c, (_, v)| {
+                let (sender, receiver) = channel();
+                v.par_iter().for_each_with(sender, |s_t, reported_string| {
+                    s_t.send(string_to_bitvec(f.encoder.process(reported_string.clone())))
+                        .unwrap();
+                });
+
+                sender_c.send(receiver.iter().collect()).unwrap();
             });
 
-            let mut bvs = Vec::new();
-            cohorts.push(bvs);
-        });
-
+        let cohorts: Vec<Vec<BitVec>> = receiver.iter().collect();
         println!("size of cohorts is {}", cohorts.len());
         Ok(())
-    }
-
-    // this part is doing a lot of stupid things now, potentially very
-    // slow
-    // this should return not just bitvec but also group them into different cohort
-    fn process_string_record(
-        encoder: &encode::Factory,
-        record: &String,
-    ) -> Result<BitVec, Box<dyn Error>> {
-        // This is an intentional unwrap
-        Ok(string_to_bitvec(encoder.process(record.clone())))
     }
 }
