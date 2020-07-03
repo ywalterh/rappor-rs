@@ -292,12 +292,14 @@ mod tests {
 
     use std::collections::HashMap;
     use std::sync::mpsc::channel;
+    use std::time::Instant;
 
     #[test]
     fn test_regression() -> Result<(), Box<dyn Error>> {
         let f = Factory::new();
         let mut rdr = csv::Reader::from_path("tests/test-cases.csv")?;
 
+        let now = Instant::now();
         let mut data_map = HashMap::<usize, Vec<String>>::new();
         // load in memory first and then. it's only 13M data
         // partitioning data here
@@ -328,6 +330,12 @@ mod tests {
 
         let cohorts: Vec<Vec<BitVec>> = receiver.iter().collect();
         println!("size of cohorts is {}", cohorts.len());
+        println!("It took {} ms to process text", now.elapsed().as_millis());
+
+        let now = Instant::now();
+        let result = f.estimate_y(cohorts);
+        println!("It took {} ms to estimate y", now.elapsed().as_millis());
+
         Ok(())
     }
 }
