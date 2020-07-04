@@ -88,4 +88,12 @@ mod tests {
         println!("{}", result);
         assert_eq!(result.len(), 32);
     }
+
+    #[test]
+    fn test_bloomfilter_bits() {
+        // the only variable we are taking is num of hashes
+        let f = Factory::new(1);
+        let bi = f.initialize_bloom_to_bitarray("abc".into()).bits;
+        println!("resulting bis is {:?}", bi);
+    }
 }
