@@ -333,8 +333,24 @@ mod tests {
         println!("It took {} ms to process text", now.elapsed().as_millis());
 
         let now = Instant::now();
-        let result = f.estimate_y(cohorts);
+        f.estimate_y(cohorts);
         println!("It took {} ms to estimate y", now.elapsed().as_millis());
+
+        // select lasso in parallel, rest channel for other purpose
+        // this part is not useful yet
+        // until we have real lasso and OLS implementation
+        /*
+        let now = Instant::now();
+        result.par_iter().for_each(|v| {
+            let mut ols_factory = linear::Factory::new();
+            let selected_strings = f.lasso_select_string(v);
+            ols_factory.ols(&selected_strings.unwrap(), v);
+        });
+        println!(
+            "It took {} ms to do lasso and ols",
+            now.elapsed().as_millis()
+        );
+        */
 
         Ok(())
     }
