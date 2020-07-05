@@ -19,5 +19,6 @@ https://static.googleusercontent.com/media/research.google.com/en//pubs/archive/
 
 - [x] add reference test from ols.py
 - [x] implement a CDF and then caclualte p value in OLS
-- [ ] Compare the result with rappor implementation in github
+- [x] Compare the result with rappor implementation in github
 - [ ] further enhance lasso implementation and OLS implementation
+- [ ] Use glmnet like the R implementation 
