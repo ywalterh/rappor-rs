@@ -6,13 +6,13 @@ use ndarray::*;
 use std::io::ErrorKind;
 
 pub struct Factory {
-    pub encoder: encode::Factory,
+    pub encoder: encode::EncoderFactory,
 }
 
 impl Factory {
     pub fn new() -> Self {
         Factory {
-            encoder: encode::Factory::new(1),
+            encoder: encode::EncoderFactory::new(1),
         }
     }
 
@@ -130,7 +130,7 @@ impl Factory {
         let mut design_matrix = Array2::<f64>::zeros((self.encoder.k, 5));
 
         for i in 0..candidate_strings.len() {
-            let encode_factory = encode::Factory::new(1);
+            let encode_factory = encode::EncoderFactory::new(1);
             let bf = encode_factory.initialize_bloom_to_bitarray(candidate_strings[i].into());
             let mut col = design_matrix.column_mut(i);
             for j in 0..col.len() {
@@ -196,8 +196,8 @@ mod tests {
     fn test_string_to_bitvec() {
         // give me a y!
         // translate
-        let encode_factory = encode::Factory::new(1);
-        let encoded = encode_factory.process("d".into());
+        let encode_factory = encode::EncoderFactory::new(1);
+        let encoded = encode_factory.encode(1, "d".into());
         let bv = string_to_bitvec(encoded);
         assert_eq!(bv.len(), 32);
     }
@@ -217,7 +217,7 @@ mod tests {
                 if i > 900 {
                     test_string = "b";
                 }
-                let encoded = f.encoder.process(test_string.into());
+                let encoded = f.encoder.encode(1, test_string.into());
                 bvs.push(string_to_bitvec(encoded));
             }
 
@@ -321,8 +321,10 @@ mod tests {
             .for_each_with(sender, |sender_c, (_, v)| {
                 let (sender, receiver) = channel();
                 v.par_iter().for_each_with(sender, |s_t, reported_string| {
-                    s_t.send(string_to_bitvec(f.encoder.process(reported_string.clone())))
-                        .unwrap();
+                    s_t.send(string_to_bitvec(
+                        f.encoder.encode(1, reported_string.clone()),
+                    ))
+                    .unwrap();
                 });
 
                 sender_c.send(receiver.iter().collect()).unwrap();

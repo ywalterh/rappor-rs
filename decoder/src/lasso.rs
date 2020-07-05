@@ -27,7 +27,17 @@ impl LassoFactory {
         }
     }
 
-    // get feature matrix as x, and output as y
+    // Compare with the Lasso implementation RAPPOR github repo is
+    /*
+      mod <- try(glmnet(X, Y, standardize = FALSE, intercept = intercept,
+            lower.limits = 0,  # outputs are non-negative
+            # Cap the number of non-zero coefficients to 500 or
+            # 80% of the length of Y, whichever is less. The 500 cap
+            # is for performance reasons, 80% is to avoid overfitting.
+            pmax = min(500, length(Y) * .8)),
+        silent = TRUE)
+    */
+
     // return weights
     pub fn train(&mut self, x: &Array2<f64>, y: &Array1<f64>) {
         let l1_penalty = 0.01;

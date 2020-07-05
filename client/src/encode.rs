@@ -1,8 +1,11 @@
 use bloom::{BloomFilter, ASMS};
+use byteorder::{BigEndian, WriteBytesExt};
+use hmac::{Hmac, Mac, NewMac};
 use rand::Rng;
+use sha2::Sha256;
 
 // This contains the client implementation of RAPPOR
-pub struct Factory {
+pub struct EncoderFactory {
     pub k: usize,
     h: u32,
     pub f: f64,
@@ -10,9 +13,9 @@ pub struct Factory {
     pub q: f64,
 }
 
-impl Factory {
+impl EncoderFactory {
     pub fn new(h: u32) -> Self {
-        Factory {
+        EncoderFactory {
             k: 32,
             h,
             f: 0.5,
@@ -29,7 +32,39 @@ impl Factory {
         return bf;
     }
 
-    pub fn process(&self, value: String) -> String {
+    // This is the encode method
+    // return the actual String to transfer through something like WASM
+    // should we just use gRPC or some sort and use byte directly
+    pub fn encode(&self, cohort_id: u32, value: String) -> String {
+        // Transfer cohort id into first four byte during hasing
+        // not sure if this is necessary
+        // to do that in Rust, I'm including two crates hex and byte order
+        // @Cleanup
+        let mut wrt: Vec<u8> = vec![];
+        wrt.write_u32::<BigEndian>(cohort_id).unwrap();
+        let value_to_encode = format! {"{}{}", hex::encode(wrt), value};
+
+        // the return type of this digest is a 16 bit of u8
+        let digest = md5::compute(value_to_encode.as_bytes());
+        assert!(digest.len() == 16);
+        let digest_array: [u8; 16] = digest.into();
+
+        // use bit wise or to caculate final bloom for randomization
+        let mut bloom = 0;
+        for b in digest_array.iter() {
+            let b_shift = 1 << b;
+            bloom |= b_shift;
+        }
+
+        // mask prr value
+        // permanent randomized response with f, 1/2 f, 1/2f to 0, 1 - f with Bi
+        // the reference implementation uses hmac, so I'm using hmac too
+        type HmacSha256 = Hmac<Sha256>;
+        let mut hmac = HmacSha256::new_varkey(b"secret").expect("HMAC can take key of any size");
+
+        // the digest if the hash is 'v\x8d\x87Lul\xf6\t\xc8B\xaa\xbf\t\x03@\xb1' in python code
+        println!("digest of {} is  {:x}", value_to_encode, digest);
+
         // this is the B[i] set
         let bi = self.initialize_bloom_to_bitarray(value).bits;
 
@@ -81,9 +116,9 @@ mod tests {
     use super::*;
 
     #[test]
-    fn it_works() {
-        let f = Factory::new(1);
-        let result = f.process("68".into());
+    fn test_encoder_encode() {
+        let f = EncoderFactory::new(1);
+        let result = f.encode(1, "abc".into());
         assert_ne!(result, "");
         println!("{}", result);
         assert_eq!(result.len(), 32);
@@ -92,7 +127,7 @@ mod tests {
     #[test]
     fn test_bloomfilter_bits() {
         // the only variable we are taking is num of hashes
-        let f = Factory::new(1);
+        let f = EncoderFactory::new(1);
         let bi = f.initialize_bloom_to_bitarray("abc".into()).bits;
         println!("resulting bis is {:?}", bi);
     }
