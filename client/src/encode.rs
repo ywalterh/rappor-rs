@@ -160,7 +160,7 @@ mod tests {
     fn test_get_bloom() {
         let f = EncoderFactory::new(1);
         let bloom = f.get_bloom(1, &"abc".into(), f.num_hashes, f.num_bloombits);
-        assert_eq!(bloom, 8196);
+        assert_eq!(bloom, 8192);
     }
 
     #[test]
