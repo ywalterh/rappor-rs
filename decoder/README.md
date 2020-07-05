@@ -12,6 +12,9 @@ Docker build
 
 `docker build -t fuzzymen .`
 
+For my weird new AMD Ryzen 4900HS Process do this
+`env OPENBLAS_TARGET=ZEN cargo build`
+
 ## References
 https://static.googleusercontent.com/media/research.google.com/en//pubs/archive/42852.pdf
 
