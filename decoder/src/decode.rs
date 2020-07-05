@@ -131,10 +131,11 @@ impl Factory {
 
         for i in 0..candidate_strings.len() {
             let encode_factory = encode::EncoderFactory::new(1);
-            let bf = encode_factory.initialize_bloom_to_bitarray(candidate_strings[i].into());
+            let bf = encode_factory.encode(1, candidate_strings[i].into());
+            let bits = bf.as_bytes();
             let mut col = design_matrix.column_mut(i);
             for j in 0..col.len() {
-                if bf.bits[j] {
+                if bits[j] == 1 {
                     col[j] = 1.;
                 } else {
                     col[j] = 0.;
