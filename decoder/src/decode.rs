@@ -128,14 +128,14 @@ impl Factory {
         let candidate_strings = ["a", "b", "c", "d", "e"];
         //  32 is encode_factory.k ?
         let mut design_matrix = Array2::<f64>::zeros((self.encoder.k, 5));
-
         for i in 0..candidate_strings.len() {
             let encode_factory = encode::EncoderFactory::new(1);
-            let bf = encode_factory.encode(1, candidate_strings[i].into());
-            let bits = bf.as_bytes();
+            let irr = encode_factory.encode(1, candidate_strings[i].into());
+            let bits = u32_to_bitvec(irr);
+            assert_eq!(bits.len(), 32, "should be a size 32?");
             let mut col = design_matrix.column_mut(i);
             for j in 0..col.len() {
-                if bits[j] == 1 {
+                if bits[j] {
                     col[j] = 1.;
                 } else {
                     col[j] = 0.;
@@ -145,6 +145,16 @@ impl Factory {
 
         design_matrix
     }
+}
+
+fn u32_to_bitvec(input: u32) -> BitVec {
+    let mut bv: BitVec = BitVec::new();
+    // assume 32 bit
+    for i in (0..32).rev() {
+        let k = input >> i;
+        bv.push((k & 1) == 1);
+    }
+    bv
 }
 
 fn to_a1(bv: &BitVec) -> Array1<f64> {
@@ -162,22 +172,41 @@ mod tests {
     use rayon::prelude::*;
     use std::error::Error;
 
-    // likely something received from the web is
-    // a string, need to convert it to bitvec
-    fn string_to_bitvec(s: String) -> BitVec {
-        // I think I'm sending ones and zeros. let's see
-        let mut bv: BitVec = BitVec::new();
-        for c in s.chars() {
-            bv.push(c != '0');
-        }
+    #[test]
+    fn test_u32_to_bitvec() {
+        let input = 1;
+        let bv = u32_to_bitvec(input);
+        assert!(bv.eq_vec(&[
+            false, false, false, false, false, false, false, false, false, false, false, false,
+            false, false, false, false, false, false, false, false, false, false, false, false,
+            false, false, false, false, false, false, false, true
+        ]));
 
-        bv
+        let input = 0;
+        let bv = u32_to_bitvec(input);
+        assert!(bv.eq_vec(&[
+            false, false, false, false, false, false, false, false, false, false, false, false,
+            false, false, false, false, false, false, false, false, false, false, false, false,
+            false, false, false, false, false, false, false, false
+        ]));
+
+        let input = 17;
+        let bv = u32_to_bitvec(input);
+
+        assert_eq!(bv.len(), 32);
+        assert!(bv.eq_vec(&[
+            false, false, false, false, false, false, false, false, false, false, false, false,
+            false, false, false, false, false, false, false, false, false, false, false, false,
+            false, false, false, true, false, false, false, true
+        ]));
     }
 
     #[test]
     fn test_create_matrix() {
         let f = Factory::new();
         let matrix = f.create_design_matrix();
+        // uncomment if want sanity check on matrix
+        // println! {"resuling matrix is {}", matrix};
         assert_eq!(matrix.len(), 32 * 5);
         // make sure there's at least some non-negative stuff..
         let mut all_zero = true;
@@ -191,16 +220,6 @@ mod tests {
         }
 
         assert!(!all_zero)
-    }
-
-    #[test]
-    fn test_string_to_bitvec() {
-        // give me a y!
-        // translate
-        let encode_factory = encode::EncoderFactory::new(1);
-        let encoded = encode_factory.encode(1, "d".into());
-        let bv = string_to_bitvec(encoded);
-        assert_eq!(bv.len(), 32);
     }
 
     #[test]
@@ -219,7 +238,7 @@ mod tests {
                     test_string = "b";
                 }
                 let encoded = f.encoder.encode(1, test_string.into());
-                bvs.push(string_to_bitvec(encoded));
+                bvs.push(u32_to_bitvec(encoded));
             }
 
             let y = f.estimate_y(vec![bvs]);
@@ -322,10 +341,8 @@ mod tests {
             .for_each_with(sender, |sender_c, (_, v)| {
                 let (sender, receiver) = channel();
                 v.par_iter().for_each_with(sender, |s_t, reported_string| {
-                    s_t.send(string_to_bitvec(
-                        f.encoder.encode(1, reported_string.clone()),
-                    ))
-                    .unwrap();
+                    s_t.send(u32_to_bitvec(f.encoder.encode(1, reported_string.clone())))
+                        .unwrap();
                 });
 
                 sender_c.send(receiver.iter().collect()).unwrap();

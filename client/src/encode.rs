@@ -117,7 +117,7 @@ impl EncoderFactory {
     // This is the encode method
     // return the actual String to transfer through something like WASM
     // should we just use gRPC or some sort and use byte directly
-    pub fn encode(&self, cohort_id: u32, word: String) -> String {
+    pub fn encode(&self, cohort_id: u32, word: String) -> u32 {
         let bloom = self.get_bloom(cohort_id, &word, self.num_hashes, self.num_bloombits);
         let (uniform, f_mask) = self.get_prr_masks("secret", bloom, 32);
         /*
@@ -147,8 +147,7 @@ impl EncoderFactory {
         let q_bits = self.random_bits(self.q, self.num_bloombits);
 
         // this is RAPPOR
-        let irr = (p_bits & !prr) | (q_bits & prr);
-        irr.to_string()
+        (p_bits & !prr) | (q_bits & prr)
     }
 }
 
@@ -176,7 +175,7 @@ mod tests {
     fn test_encoder_encode() {
         let f = EncoderFactory::new(1);
         let result = f.encode(1, "abc".into());
-        assert_ne!(result, "");
+        assert_ne!(result, 0);
         println!("Result is {}, shoud be a u32", result);
     }
 }
