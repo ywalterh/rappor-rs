@@ -21,7 +21,7 @@ pub async fn greet(input: String) -> Result<JsValue, JsValue> {
     // use rest API call to communicate with server
     let res = reqwest::Client::new()
         .post("http://localhost:8000/api/report")
-        .body(result)
+        .body(result.to_string())
         .header("Access-Control-Allow-Origin", "*")
         .send()
         .await;
