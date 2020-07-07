@@ -44,3 +44,5 @@ npm run start
 https://static.googleusercontent.com/media/research.google.com/en//pubs/archive/42852.pdf
 
 https://www.erikpartridge.com/2019-03/rust-ml-simd-blas-lapack
+
+https://en.wikipedia.org/wiki/Counting_Bloom_filter
