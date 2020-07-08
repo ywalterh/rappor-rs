@@ -32,10 +32,27 @@ fn sum_bits(
     Ok(array)
 }
 
+// Return number of positive bits in a string of IRR string
+fn count_bits(irr: String) -> usize {
+    let mut sum = 0;
+    for bit in irr.chars() {
+        if bit == '1' {
+            sum = sum + 1;
+        }
+    }
+    sum
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use std::time::Instant;
+
+    #[test]
+    fn test_count_bits() {
+        let sum_result = count_bits("00001000".into());
+        assert_eq!(1, sum_result);
+    }
 
     // try to work out how to use glmnet
     #[test]
