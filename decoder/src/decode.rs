@@ -1,3 +1,4 @@
+use super::feature_matrix;
 use super::lasso;
 use super::linear;
 use bit_vec::BitVec;
@@ -91,7 +92,10 @@ impl Factory {
     pub fn lasso_select_string(&self, y: &Array1<f64>) -> Result<Array2<f64>, ErrorKind> {
         // train the model of desigm matrix
         // the default bahavior of this is five candidate strings
-        let matrix = self.create_design_matrix();
+        let matrix = feature_matrix::create_design_matrix(
+            self.encoder.num_bloombits as usize,
+            feature_matrix::test_candidate_strings,
+        );
         let mut lasso_factory = lasso::LassoFactory::new(5);
         lasso_factory.train(&matrix, y);
         println!("predicated lasso weights is {}", lasso_factory.weights);
@@ -123,38 +127,6 @@ impl Factory {
 
         Ok(updated_feature_matrix)
     }
-
-    fn create_design_matrix(&self) -> Array2<f64> {
-        let candidate_strings = ["a", "b", "c", "d", "e"];
-        //  32 is encode_factory.k ?
-        let mut design_matrix = Array2::<f64>::zeros((self.encoder.k, 5));
-        for i in 0..candidate_strings.len() {
-            let encode_factory = encode::EncoderFactory::new(1);
-            let irr = encode_factory.encode(1, candidate_strings[i].into());
-            let bits = u32_to_bitvec(irr);
-            assert_eq!(bits.len(), 32, "should be a size 32?");
-            let mut col = design_matrix.column_mut(i);
-            for j in 0..col.len() {
-                if bits[j] {
-                    col[j] = 1.;
-                } else {
-                    col[j] = 0.;
-                }
-            }
-        }
-
-        design_matrix
-    }
-}
-
-fn u32_to_bitvec(input: u32) -> BitVec {
-    let mut bv: BitVec = BitVec::new();
-    // assume 32 bit
-    for i in (0..32).rev() {
-        let k = input >> i;
-        bv.push((k & 1) == 1);
-    }
-    bv
 }
 
 fn to_a1(bv: &BitVec) -> Array1<f64> {
@@ -173,38 +145,12 @@ mod tests {
     use std::error::Error;
 
     #[test]
-    fn test_u32_to_bitvec() {
-        let input = 1;
-        let bv = u32_to_bitvec(input);
-        assert!(bv.eq_vec(&[
-            false, false, false, false, false, false, false, false, false, false, false, false,
-            false, false, false, false, false, false, false, false, false, false, false, false,
-            false, false, false, false, false, false, false, true
-        ]));
-
-        let input = 0;
-        let bv = u32_to_bitvec(input);
-        assert!(bv.eq_vec(&[
-            false, false, false, false, false, false, false, false, false, false, false, false,
-            false, false, false, false, false, false, false, false, false, false, false, false,
-            false, false, false, false, false, false, false, false
-        ]));
-
-        let input = 17;
-        let bv = u32_to_bitvec(input);
-
-        assert_eq!(bv.len(), 32);
-        assert!(bv.eq_vec(&[
-            false, false, false, false, false, false, false, false, false, false, false, false,
-            false, false, false, false, false, false, false, false, false, false, false, false,
-            false, false, false, true, false, false, false, true
-        ]));
-    }
-
-    #[test]
     fn test_create_matrix() {
         let f = Factory::new();
-        let matrix = f.create_design_matrix();
+        let matrix = feature_matrix::create_design_matrix(
+            f.encoder.num_bloombits as usize,
+            feature_matrix::test_candidate_strings,
+        );
         // uncomment if want sanity check on matrix
         // println! {"resuling matrix is {}", matrix};
         assert_eq!(matrix.len(), 32 * 5);
@@ -238,7 +184,7 @@ mod tests {
                     test_string = "b";
                 }
                 let encoded = f.encoder.encode(1, test_string.into());
-                bvs.push(u32_to_bitvec(encoded));
+                bvs.push(feature_matrix::u32_to_bitvec(encoded));
             }
 
             let y = f.estimate_y(vec![bvs]);
@@ -341,8 +287,10 @@ mod tests {
             .for_each_with(sender, |sender_c, (_, v)| {
                 let (sender, receiver) = channel();
                 v.par_iter().for_each_with(sender, |s_t, reported_string| {
-                    s_t.send(u32_to_bitvec(f.encoder.encode(1, reported_string.clone())))
-                        .unwrap();
+                    s_t.send(feature_matrix::u32_to_bitvec(
+                        f.encoder.encode(1, reported_string.clone()),
+                    ))
+                    .unwrap();
                 });
 
                 sender_c.send(receiver.iter().collect()).unwrap();

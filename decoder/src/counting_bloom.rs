@@ -3,6 +3,8 @@ use ndarray::*;
 use std::collections::HashMap;
 use std::error::Error;
 
+// Not sure if this file is useful at all
+// it basically does the same thing as part of estimate_y
 // This method is probably not useful for actual production use
 fn sum_bits(
     data_csv: &str,
