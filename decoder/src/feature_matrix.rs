@@ -5,6 +5,8 @@ use ndarray::Array2;
 // This file is created to host logic of creating different design matrix
 // in our unit test we use 'a - e', in rapport github repo they use v1 - v190
 // should be able to support both easily
+// matrix is actually also a sum of bits instead of what we used to think
+// an array of bits aren't good enough for compare against, very easily we can get weird results
 pub fn create_design_matrix(num_bloombits: usize, candidate_strings: &[&str]) -> Array2<f64> {
     //  32 is encode_factory.k ?
     let mut design_matrix = Array2::<f64>::zeros((num_bloombits, candidate_strings.len()));
@@ -21,6 +23,9 @@ pub fn create_design_matrix(num_bloombits: usize, candidate_strings: &[&str]) ->
                 col[j] = 0.;
             }
         }
+
+        // instead of having a matrix of a this
+        // row.append(cohort * num_bloombits + (bit_to_set + 1))
     }
 
     design_matrix
