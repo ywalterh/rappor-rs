@@ -22,6 +22,8 @@ pub fn create_design_matrix(
             //for each cohort, generate a count
             let encode_factory = encode::EncoderFactory::new(1);
             let bits = encode_factory.get_bloom_bits(cohort as u32, &word, 2, num_bloombits as u8);
+            // the number of bits returned are the number of hashes. how do we feed them as X??
+            // this is currently failing until we understand what's going on
             assert_eq!(bits.len(), 32, "should be a size 32?");
 
             // instead of having a matrix of a this
