@@ -10,6 +10,8 @@ pub struct Factory {
     pub encoder: encode::EncoderFactory,
 }
 
+const num_cohorts: usize = 64;
+
 impl Factory {
     pub fn new() -> Self {
         Factory {
@@ -94,6 +96,7 @@ impl Factory {
         // the default bahavior of this is five candidate strings
         let matrix = feature_matrix::create_design_matrix(
             self.encoder.num_bloombits as usize,
+            num_cohorts,
             feature_matrix::test_candidate_strings,
         );
         let mut lasso_factory = lasso::LassoFactory::new(5);
@@ -149,6 +152,7 @@ mod tests {
         let f = Factory::new();
         let matrix = feature_matrix::create_design_matrix(
             f.encoder.num_bloombits as usize,
+            num_cohorts,
             feature_matrix::test_candidate_strings,
         );
         // uncomment if want sanity check on matrix

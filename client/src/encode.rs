@@ -24,14 +24,13 @@ impl EncoderFactory {
         }
     }
 
-    // even thought it's declaring 32 bit, but we currenlty only using 16 bit
-    fn get_bloom(
+    pub fn get_bloom_bits(
         &self,
         cohort_id: u32,
         word: &String,
         num_hashes: usize,
         num_bloombits: u8, // num_bloombits is u8 because we are using a mod (%) below
-    ) -> u32 {
+    ) -> Vec<u8> {
         // Transfer cohort id into first four byte during hasing
         // not sure if this is necessary
         // to do that in Rust, I'm including two crates hex and byte order
@@ -41,7 +40,7 @@ impl EncoderFactory {
         let value_to_encode = format! {"{}{}", hex::encode(&buf), word};
 
         // the return type of this digest is a 16 bit of u8
-        // Each has has  byte, which means we could have up to 256 bit bloom filters
+        // Each has has byte, which means we could have up to 256 bit bloom filters
         // There are 16 bytes in aan MD5, so we can have up to 16 hash functions
         // per bloom filter, in this case, we need to find out how many
         // we are using, hence num_hashes are taken
@@ -58,6 +57,19 @@ impl EncoderFactory {
         for i in 0..num_hashes {
             bits.push(digest_array[i] % num_bloombits);
         }
+
+        bits
+    }
+
+    // even thought it's declaring 32 bit, but we currenlty only using 16 bit
+    fn get_bloom(
+        &self,
+        cohort_id: u32,
+        word: &String,
+        num_hashes: usize,
+        num_bloombits: u8, // num_bloombits is u8 because we are using a mod (%) below
+    ) -> u32 {
+        let bits = self.get_bloom_bits(cohort_id, word, num_hashes, num_bloombits);
 
         // use bit wise or to caculate final bloom for randomization
         let mut bloom = 0;

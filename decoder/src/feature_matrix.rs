@@ -21,20 +21,16 @@ pub fn create_design_matrix(
         for cohort in 0..num_cohorts {
             //for each cohort, generate a count
             let encode_factory = encode::EncoderFactory::new(1);
-            let irr = encode_factory.encode(cohort as u32, word);
-            let bits = u32_to_bitvec(irr);
+            let bits = encode_factory.get_bloom_bits(cohort as u32, &word, 2, num_bloombits as u8);
             assert_eq!(bits.len(), 32, "should be a size 32?");
 
             // instead of having a matrix of a this
             // row.append(cohort * num_bloombits + (bit_to_set + 1)) but why?
-            //
+            // this is the actual map used in decoding
+            // not the one we thought it would be
             let mut col = design_matrix.column_mut(i);
             for j in 0..col.len() {
-                let bit = 0;
-                if bits[j] {
-                    bit = 1;
-                }
-                col[j] = (cohort * num_bloombits + (bit + 1)) as f64;
+                col[j] = (cohort * num_bloombits + (bits[j] as usize + 1)) as f64;
             }
         }
     }
