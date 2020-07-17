@@ -24,13 +24,7 @@ impl EncoderFactory {
         }
     }
 
-    pub fn get_bloom_bits(
-        &self,
-        cohort_id: u32,
-        word: &String,
-        num_hashes: usize,
-        num_bloombits: u8, // num_bloombits is u8 because we are using a mod (%) below
-    ) -> Vec<u8> {
+    pub fn get_bloom_bits(&self, cohort_id: u32, word: &String) -> Vec<u8> {
         // Transfer cohort id into first four byte during hasing
         // not sure if this is necessary
         // to do that in Rust, I'm including two crates hex and byte order
@@ -46,7 +40,7 @@ impl EncoderFactory {
         // we are using, hence num_hashes are taken
         let digest = md5::compute(value_to_encode.as_bytes());
         assert!(
-            num_hashes <= digest.len(),
+            self.num_hashes <= digest.len(),
             "Can't have more num_hashes than digest length"
         );
 
@@ -54,22 +48,16 @@ impl EncoderFactory {
 
         // get bits per hash functions
         let mut bits = vec![];
-        for i in 0..num_hashes {
-            bits.push(digest_array[i] % num_bloombits);
+        for i in 0..self.num_hashes {
+            bits.push(digest_array[i] % self.num_bloombits);
         }
 
         bits
     }
 
     // even thought it's declaring 32 bit, but we currenlty only using 16 bit
-    fn get_bloom(
-        &self,
-        cohort_id: u32,
-        word: &String,
-        num_hashes: usize,
-        num_bloombits: u8, // num_bloombits is u8 because we are using a mod (%) below
-    ) -> u32 {
-        let bits = self.get_bloom_bits(cohort_id, word, num_hashes, num_bloombits);
+    fn get_bloom(&self, cohort_id: u32, word: &String) -> u32 {
+        let bits = self.get_bloom_bits(cohort_id, word);
 
         // use bit wise or to caculate final bloom for randomization
         let mut bloom = 0;
@@ -130,7 +118,7 @@ impl EncoderFactory {
     // return the actual String to transfer through something like WASM
     // should we just use gRPC or some sort and use byte directly
     pub fn encode(&self, cohort_id: u32, word: String) -> u32 {
-        let bloom = self.get_bloom(cohort_id, &word, self.num_hashes, self.num_bloombits);
+        let bloom = self.get_bloom(cohort_id, &word);
         let (uniform, f_mask) = self.get_prr_masks("secret", bloom, 32);
         /*
             # Suppose bit i of the Bloom filter is B_i.  Then bit i of the PRR is
@@ -170,7 +158,7 @@ mod tests {
     #[test]
     fn test_get_bloom() {
         let f = EncoderFactory::new(1);
-        let bloom = f.get_bloom(1, &"abc".into(), f.num_hashes, f.num_bloombits);
+        let bloom = f.get_bloom(1, &"abc".into());
         assert_eq!(bloom, 8192);
     }
 

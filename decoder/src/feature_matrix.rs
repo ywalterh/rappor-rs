@@ -9,31 +9,44 @@ use ndarray::Array2;
 // an array of bits aren't good enough for compare against, very easily we can get weird results
 //
 // Come up with candidate strings and see the distribution matches
+//
+//
+// Cohorts implement different sets of h hash functions for their Bloom filters
+// therefore here we are using 2 as number of hashes for the same cohort
 pub fn create_design_matrix(
     num_bloombits: usize,
     num_cohorts: usize,
     candidate_strings: &[&str],
 ) -> Array2<f64> {
     //  32 is encode_factory.k ?
-    let mut design_matrix = Array2::<f64>::zeros((num_bloombits, candidate_strings.len()));
+    let mut design_matrix = Array2::<f64>::zeros((num_cohorts, candidate_strings.len()));
     for i in 0..candidate_strings.len() {
         let word: String = candidate_strings[i].into();
+        let mut col = design_matrix.column_mut(i);
         for cohort in 0..num_cohorts {
             //for each cohort, generate a count
             let encode_factory = encode::EncoderFactory::new(1);
-            let bits = encode_factory.get_bloom_bits(cohort as u32, &word, 2, num_bloombits as u8);
+            // to make it easier for here, use num of hashes to be 1
+            // in real word results, we could increase the number
+            let bits = encode_factory.get_bloom_bits(cohort as u32, &word);
             // the number of bits returned are the number of hashes. how do we feed them as X??
             // this is currently failing until we understand what's going on
-            assert_eq!(bits.len(), 32, "should be a size 32?");
+            assert_eq!(
+                bits.len(),
+                encode_factory.num_hashes,
+                "the bits array should be the same size of num of hashes"
+            );
 
             // instead of having a matrix of a this
             // row.append(cohort * num_bloombits + (bit_to_set + 1)) but why?
             // this is the actual map used in decoding
             // not the one we thought it would be
-            let mut col = design_matrix.column_mut(i);
-            for j in 0..col.len() {
-                col[j] = (cohort * num_bloombits + (bits[j] as usize + 1)) as f64;
+            for jj in 0..bits.len() {
+                col[cohort] = (cohort * num_bloombits + (bits[jj] as usize + 1)) as f64;
             }
+
+            // design matrix should be km X M ---> number of bit is 16 in my case, and number of
+            // cohorts are 60 and M is the number of candidate strings are .. 60 or so
         }
     }
 
