@@ -47,6 +47,16 @@ pub fn create_design_matrix(
 
             // design matrix should be km X M ---> number of bit is 16 in my case, and number of
             // cohorts are 60 and M is the number of candidate strings are .. 60 or so
+            // in the R code in rappor repo
+            //
+            //
+            //  # stretch cohorts to bits
+            //  filter_bits <- as.vector(matrix(1:nrow(map), ncol = m)[,filter_cohorts, drop = FALSE])
+            //  map_filtered <- map[filter_bits, , drop = FALSE]
+            //  es <- EstimateBloomCounts(params, counts)
+            //
+            //
+            //
         }
     }
 
