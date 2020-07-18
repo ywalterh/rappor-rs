@@ -148,31 +148,6 @@ mod tests {
     use std::error::Error;
 
     #[test]
-    fn test_create_matrix() {
-        let f = Factory::new();
-        let matrix = feature_matrix::create_design_matrix(
-            f.encoder.num_bloombits as usize,
-            num_cohorts,
-            feature_matrix::test_candidate_strings,
-        );
-        // uncomment if want sanity check on matrix
-        // println! {"resuling matrix is {}", matrix};
-        assert_eq!(matrix.len(), 32 * 5);
-        // make sure there's at least some non-negative stuff..
-        let mut all_zero = true;
-        for row in matrix.genrows() {
-            for i in 0..row.len() {
-                if row[i] != 0. {
-                    all_zero = false;
-                    break;
-                }
-            }
-        }
-
-        assert!(!all_zero)
-    }
-
-    #[test]
     fn test_fit_model() -> Result<(), error::LinalgError> {
         let f = Factory::new();
 

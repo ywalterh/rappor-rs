@@ -86,7 +86,7 @@ mod tests {
 
         // uncomment if want sanity check on matrix
         // println! {"resuling matrix is {}", matrix};
-        assert_eq!(matrix.len(), 16 * 5);
+        assert_eq!(matrix.len(), 32 * 5);
         // make sure there's at least some non-negative stuff..
         let mut all_zero = true;
         for row in matrix.genrows() {
