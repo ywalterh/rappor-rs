@@ -1,4 +1,4 @@
-# fuzzy-men
+# rappor-rs
 Implement simple RAPPOR in both client and server side
 
 ![](https://github.com/ywalterh/fuzzy-men/workflows/Rust/badge.svg)
